@@ -316,33 +316,6 @@ const MERCHANTS = [
 ];
 
 
-port { useState, useRef, useCallback, useEffect } from "react";
-import Head from "next/head";
-
-// ─── CONSTANTS ────────────────────────────────────────────────────────────────
-
-const PROJECT_TYPES = ["Rear Extension","Loft Conversion","New Build","Basement","Garage Conversion","Refurbishment","Kitchen Fit-out","Bathroom Fit-out","Commercial Fit-out","Groundworks Only","Roofing","Other"];
-const STATUSES = ["Quote Sent","In Discussion","Won","Lost","On Hold"];
-const STATUS_COL = {"Quote Sent":"#f59e0b","In Discussion":"#60a5fa","Won":"#4caf50","Lost":"#ef5350","On Hold":"#888"};
-
-const REGIONS = [
-  { id:"london",     label:"London & SE",         multiplier:1.25 },
-  { id:"southeast",  label:"South East",           multiplier:1.12 },
-  { id:"southwest",  label:"South West",           multiplier:1.05 },
-  { id:"midlands",   label:"Midlands",             multiplier:1.00 },
-  { id:"northwest",  label:"North West",           multiplier:0.97 },
-  { id:"northeast",  label:"North East",           multiplier:0.93 },
-  { id:"yorkshire",  label:"Yorkshire & Humber",   multiplier:0.95 },
-  { id:"wales",      label:"Wales",                multiplier:0.92 },
-  { id:"scotland",   label:"Scotland",             multiplier:0.98 },
-  { id:"nireland",   label:"Northern Ireland",     multiplier:0.90 },
-];
-
-const MERCHANTS = [
-  "Jewson", "Travis Perkins", "MKM Building Supplies", "Selco",
-  "Buildbase", "Screwfix", "Toolstation", "CCF", "SIG", "Huws Gray",
-  "Bradfords", "National Timber Group", "Parker Building Supplies", "Other",
-];
 
 
 
@@ -602,6 +575,7 @@ function MockCard(){
     </div>
   );
 }
+
 // ─── UPLOAD ───────────────────────────────────────────────────────────────────
 function Coll({icon,title,sub,open,setOpen,highlight,children}){
   return(
@@ -833,7 +807,8 @@ function LoadingScr({step}){
         ))}
       </div>
     </div>
-concreo
+  );
+}
 
 // ─── RESULTS ──────────────────────────────────────────────────────────────────
 function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,onDash,editMode,setEditMode,onUpdate,onDelete,emailModal,setEmailModal,emailSent,setEmailSent,labourRates,setLabourRates,profitMargin,setProfitMargin}){
