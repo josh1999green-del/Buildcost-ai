@@ -1000,6 +1000,27 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
                             <input style={{width:50,background:"#111",border:`1px solid ${C.border}`,borderRadius:4,padding:"3px 5px",color:C.text,fontSize:12,textAlign:"right"}} type="number" value={item.quantity} onChange={e=>editItem(cat.name,i,"quantity",e.target.value)}/>
                             <span style={{width:32,textAlign:"right",color:C.muted,fontSize:10,paddingTop:5,flexShrink:0}}>{item.unit}</span>
                             <input style={{width:60,background:"#111",border:`1px solid ${C.border}`,borderRadius:4,padding:"3px 5px",color:C.text,fontSize:12,textAlign:"right"}} type="number" step="0.01" value={item.unitCost} onChange={e=>editItem(cat.name,i,"unitCost",e.target.value)}/>
+                                            <span style={{color:C.gold,fontWeight:700,fontSize:14}}>{fmt(cat.subtotal)}</span>
+                  <span style={{color:C.dim,fontSize:11,marginLeft:6}}>{expandCat===cat.name?"▲":"▼"}</span>
+                </div>
+                {expandCat===cat.name&&(
+                  <div style={{background:"#0c0c0b",overflowX:"auto"}}>
+                    <div style={{display:"flex",padding:"8px 14px",fontSize:10,color:C.dim,letterSpacing:1,borderBottom:`1px solid #1a1a18`,fontFamily:"monospace",gap:6,minWidth:520}}>
+                      <span style={{width:32}}>Ref</span><span style={{flex:3}}>Item</span><span style={{width:52,textAlign:"right"}}>Qty</span><span style={{width:32,textAlign:"right"}}>Unit</span><span style={{width:64,textAlign:"right"}}>Rate</span><span style={{width:64,textAlign:"right"}}>Total</span>
+                    </div>
+                    {cat.items?.map((item,i)=>(
+                      <div key={i} style={{display:"flex",padding:"11px 14px",fontSize:13,alignItems:"flex-start",gap:6,borderBottom:`1px solid #131312`,background:i%2?"#0a0a09":"transparent",minWidth:520}}>
+                        <span style={{width:32,color:C.dim,fontSize:11,flexShrink:0,paddingTop:2}}>{item.ref}</span>
+                        <div style={{flex:3,minWidth:0}}>
+                          <div style={{fontWeight:600,marginBottom:2}}>{item.name}</div>
+                          <div style={{fontSize:11,color:C.muted,lineHeight:1.5}}>{item.description}</div>
+                          {item.supplier&&<div style={{fontSize:10,color:C.dim}}>📦 {item.supplier}</div>}
+                        </div>
+                        {editMode?(
+                          <>
+                            <input style={{width:50,background:"#111",border:`1px solid ${C.border}`,borderRadius:4,padding:"3px 5px",color:C.text,fontSize:12,textAlign:"right"}} type="number" value={item.quantity} onChange={e=>editItem(cat.name,i,"quantity",e.target.value)}/>
+                            <span style={{width:32,textAlign:"right",color:C.muted,fontSize:10,paddingTop:5,flexShrink:0}}>{item.unit}</span>
+                            <input style={{width:60,background:"#111",border:`1px solid ${C.border}`,borderRadius:4,padding:"3px 5px",color:C.text,fontSize:12,textAlign:"right"}} type="number" step="0.01" value={item.unitCost} onChange={e=>editItem(cat.name,i,"unitCost",e.target.value)}/>
                           </>
                         ):(
                           <>
@@ -1017,16 +1038,6 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
               </div>
             ))}
             <div style={{border:`1px solid ${C.border}`,borderRadius:10,overflow:"hidden",marginTop:18,marginBottom:28}}>
-              {[["Sub Total",disp.totalCost],[`Contingency (${r.contingencyPercent}%)`,disp.contingency],r.designFees>0?["Design Fees",disp.designFees]:null,["Sub Total (ex. VAT)",(disp.grandTotal||disp.totalCost)/1.2],["VAT at 20%",disp.vatAmount]].filter(Boolean).map(([l,v])=>(
-                <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"12px 18px",borderBottom:`1px solid ${C.border}`,fontSize:14}}><span>{l}</span><span>{fmt(v)}</span></div>
-              ))}
-              <div style={{display:"flex",justifyContent:"space-between",padding:"15px 18px",background:"#1a1508",color:C.gold,fontWeight:700,fontSize:17}}><span>TOTAL INC. VAT</span><span>{fmt(disp.grandTotal||disp.totalCost)}</span></div>
-            </div>
-          </>
-        )}
-        {activeTab==="inclusions"&&<ListTab items={r.inclusions} title="What's Included" col={C.green} sym="✓"/>}
-        {activeTab==="exclusions"&&<ListTab items={r.exclusions} title="Exclusions" col={C.red} sym="✗"/>}
-                      <div style={{border:`1px solid ${C.border}`,borderRadius:10,overflow:"hidden",marginTop:18,marginBottom:28}}>
               {[["Sub Total",disp.totalCost],[`Contingency (${r.contingencyPercent}%)`,disp.contingency],r.designFees>0?["Design Fees",disp.designFees]:null,["Sub Total (ex. VAT)",(disp.grandTotal||disp.totalCost)/1.2],["VAT at 20%",disp.vatAmount]].filter(Boolean).map(([l,v])=>(
                 <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"12px 18px",borderBottom:`1px solid ${C.border}`,fontSize:14}}><span>{l}</span><span>{fmt(v)}</span></div>
               ))}
@@ -1103,22 +1114,3 @@ function DashScr({estimates,onNew,onView,onBack,onStatus,onDelete}){
         </div>
         <input style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},marginBottom:18}} placeholder="🔍 Search project or client…" value={search} onChange={e=>setSearch(e.target.value)}/>
         {estimates.length===0?(
-          <div style={{textAlign:"center",padding:"60px 24px"}}><div style={{fontSize:52,marginBottom:14}}>📊</div><h3 style={{color:C.muted,marginBottom:8}}>No estimates yet</h3><button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"}} onClick={onNew}>Create First Estimate →</button></div>
-        ):(
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {filtered.map(est=>{const sc=STATUS_COL[est.pipelineStatus]||C.muted;return(
-              <div key={est.id} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",cursor:"pointer"}} className="fc" onClick={()=>onView(est)}>
-                <div style={{flex:1,minWidth:160}}><div style={{fontWeight:700,fontSize:14,marginBottom:3}}>{est.projectName||"Unnamed"}</div><div style={{fontSize:11,color:C.muted}}>{est._clientName&&`👤 ${est._clientName}  `}{est.date&&`📅 ${est.date}`}</div></div>
-                <div style={{fontSize:18,fontWeight:700,color:C.gold,flexShrink:0}}>{fmt(est.grandTotal||est.totalCost)}</div>
-                <select style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},width:"auto",fontSize:12,padding:"5px 8px",color:sc,background:C.card}} value={est.pipelineStatus||"Quote Sent"} onChange={e=>{e.stopPropagation();onStatus(est.id,e.target.value);}}>
-                  {STATUSES.map(st=><option key={st}>{st}</option>)}
-                </select>
-                <button style={{background:"none",border:`1px solid ${C.red}44`,color:C.red,padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:12,flexShrink:0}} onClick={e=>{e.stopPropagation();onDelete(est.id);}}>🗑</button>
-              </div>
-            );})}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
