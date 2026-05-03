@@ -1026,6 +1026,16 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
         )}
         {activeTab==="inclusions"&&<ListTab items={r.inclusions} title="What's Included" col={C.green} sym="✓"/>}
         {activeTab==="exclusions"&&<ListTab items={r.exclusions} title="Exclusions" col={C.red} sym="✗"/>}
+                      <div style={{border:`1px solid ${C.border}`,borderRadius:10,overflow:"hidden",marginTop:18,marginBottom:28}}>
+              {[["Sub Total",disp.totalCost],[`Contingency (${r.contingencyPercent}%)`,disp.contingency],r.designFees>0?["Design Fees",disp.designFees]:null,["Sub Total (ex. VAT)",(disp.grandTotal||disp.totalCost)/1.2],["VAT at 20%",disp.vatAmount]].filter(Boolean).map(([l,v])=>(
+                <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"12px 18px",borderBottom:`1px solid ${C.border}`,fontSize:14}}><span>{l}</span><span>{fmt(v)}</span></div>
+              ))}
+              <div style={{display:"flex",justifyContent:"space-between",padding:"15px 18px",background:"#1a1508",color:C.gold,fontWeight:700,fontSize:17}}><span>TOTAL INC. VAT</span><span>{fmt(disp.grandTotal||disp.totalCost)}</span></div>
+            </div>
+          </>
+        )}
+        {activeTab==="inclusions"&&<ListTab items={r.inclusions} title="What's Included" col={C.green} sym="✓"/>}
+        {activeTab==="exclusions"&&<ListTab items={r.exclusions} title="Exclusions" col={C.red} sym="✗"/>}
         {activeTab==="notes"&&<ListTab items={r.notes} title="Estimator Notes" col={C.gold} sym="•"/>}
         <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:24}} className="no-print">
           <button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"}} onClick={()=>window.print()}>🖨️ Print / Save as PDF</button>
