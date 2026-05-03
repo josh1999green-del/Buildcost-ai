@@ -858,3 +858,62 @@ const s = {
   lnkBtn:  {background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0},
   card:    C.card,
 };
+function DashScr({estimates,onNew,onView,onBack,onStatus,onDelete}){
+  const [search,setSearch]=useState("");
+  const [filter,setFilter]=useState("All");
+  const totalVal=estimates.reduce((a,e)=>a+(e.grandTotal||e.totalCost||0),0);
+  const wonVal=estimates.filter(e=>e.pipelineStatus==="Won").reduce((a,e)=>a+(e.grandTotal||e.totalCost||0),0);
+  const wonCount=estimates.filter(e=>e.pipelineStatus==="Won").length;
+  const filtered=estimates.filter(e=>filter==="All"||e.pipelineStatus===filter).filter(e=>!search||[e.projectName,e._clientName,e._siteAddr].some(v=>v?.toLowerCase().includes(search.toLowerCase())));
+  return(
+    <div style={{minHeight:"100vh",background:C.bg,color:C.text}}>
+      <Nav onBack={onBack} onNew={onNew}/>
+      <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 80px"}}>
+        <div style={{padding:"36px 0 24px"}}><div style={{fontSize:10,letterSpacing:3,color:C.gold,marginBottom:14,fontFamily:"monospace"}}>DASHBOARD</div><h2 style={{fontSize:"clamp(24px,4vw,34px)",fontWeight:700,letterSpacing:"-1px"}}>Job Pipeline</h2></div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12,marginBottom:28}}>
+          {[["Pipeline",fmt(totalVal),"All estimates",C.gold],["Won",fmt(wonVal),`${wonCount} job${wonCount!==1?"s":""}`,C.green],["Estimates",estimates.length,"Saved","#60a5fa"],["Active",estimates.filter(e=>!["Won","Lost"].includes(e.pipelineStatus)).length,"In progress",C.amber]].map(([l,v,sub,col])=>(
+            <div key={l} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"16px 18px"}}>
+              <div style={{fontSize:10,color:C.muted,letterSpacing:1,marginBottom:5}}>{l}</div>
+              <div style={{fontSize:24,fontWeight:700,color:col,marginBottom:2}}>{v}</div>
+              <div style={{fontSize:11,color:C.dim}}>{sub}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{display:"flex",gap:7,marginBottom:16,overflowX:"auto",paddingBottom:4}}>
+          {["All",...STATUSES].map(st=>{const cnt=st==="All"?estimates.length:estimates.filter(e=>e.pipelineStatus===st).length;const col=STATUS_COL[st]||C.gold;return(<button key={st} style={{background:filter===st?(st==="All"?C.gold:col):"transparent",color:filter===st?"#080807":C.muted,border:`1px solid ${filter===st?(st==="All"?C.gold:col):C.border}`,padding:"7px 14px",borderRadius:20,cursor:"pointer",fontSize:12,whiteSpace:"nowrap"}} onClick={()=>setFilter(st)}>{st} ({cnt})</button>);})}
+        </div>
+        <input style={{...s.inp,marginBottom:18}} placeholder="🔍 Search project or client…" value={search} onChange={e=>setSearch(e.target.value)}/>
+        {estimates.length===0?(
+          <div style={{textAlign:"center",padding:"60px 24px"}}><div style={{fontSize:52,marginBottom:14}}>📊</div><h3 style={{color:C.muted,marginBottom:8}}>No estimates yet</h3><button style={s.submitBtn} onClick={onNew}>Create First Estimate →</button></div>
+        ):(
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {filtered.map(est=>{const sc=STATUS_COL[est.pipelineStatus]||C.muted;return(
+              <div key={est.id} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",cursor:"pointer"}} className="fc" onClick={()=>onView(est)}>
+                <div style={{flex:1,minWidth:160}}><div style={{fontWeight:700,fontSize:14,marginBottom:3}}>{est.projectName||"Unnamed"}</div><div style={{fontSize:11,color:C.muted}}>{est._clientName&&`👤 ${est._clientName}  `}{est.date&&`📅 ${est.date}`}</div></div>
+                <div style={{fontSize:18,fontWeight:700,color:C.gold,flexShrink:0}}>{fmt(est.grandTotal||est.totalCost)}</div>
+                <select style={{...s.inp,width:"auto",fontSize:12,padding:"5px 8px",color:sc,background:C.card}} value={est.pipelineStatus||"Quote Sent"} onChange={e=>{e.stopPropagation();onStatus(est.id,e.target.value);}}>
+                  {STATUSES.map(st=><option key={st}>{st}</option>)}
+                </select>
+                <button style={{background:"none",border:`1px solid ${C.red}44`,color:C.red,padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:12,flexShrink:0}} onClick={e=>{e.stopPropagation();onDelete(est.id);}}>🗑</button>
+              </div>
+            );})}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── SHARED STYLES ────────────────────────────────────────────────────────────
+const s = {
+  navLnk: {background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:13,padding:"7px 9px"},
+  navBtn:  {background:"none",border:`1px solid ${C.border}`,color:C.muted,cursor:"pointer",fontSize:12,padding:"6px 13px",borderRadius:6},
+  cta:     {background:C.gold,color:"#080807",border:"none",padding:"14px 30px",fontSize:15,fontWeight:700,borderRadius:4,cursor:"pointer"},
+  ghost:   {background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer"},
+  lbl:     {display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"},
+  inp:     {width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},
+  submitBtn:{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"},
+  ghostBtn: {width:"100%",background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:14,fontSize:14,borderRadius:6,cursor:"pointer"},
+  lnkBtn:  {background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0},
+  card:    C.card,
+};
