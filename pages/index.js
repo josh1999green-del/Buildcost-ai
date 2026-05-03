@@ -7,51 +7,105 @@ const PROJECT_TYPES = ["Rear Extension","Loft Conversion","New Build","Basement"
 const STATUSES = ["Quote Sent","In Discussion","Won","Lost","On Hold"];
 const STATUS_COL = {"Quote Sent":"#f59e0b","In Discussion":"#60a5fa","Won":"#4caf50","Lost":"#ef5350","On Hold":"#888"};
 
-const REGIONS = [
-  { id:"london",     label:"London & SE",         multiplier:1.25 },
-  { id:"southeast",  label:"South East",           multiplier:1.12 },
-  { id:"southwest",  label:"South West",           multiplier:1.05 },
-  { id:"midlands",   label:"Midlands",             multiplier:1.00 },
-  { id:"northwest",  label:"North West",           multiplier:0.97 },
-  { id:"northeast",  label:"North East",           multiplier:0.93 },
-  { id:"yorkshire",  label:"Yorkshire & Humber",   multiplier:0.95 },
-  { id:"wales",      label:"Wales",                multiplier:0.92 },
-  { id:"scotland",   label:"Scotland",             multiplier:0.98 },
-  { id:"nireland",   label:"Northern Ireland",     multiplier:0.90 },
-];
-
-const MERCHANTS = [
-  "Jewson", "Travis Perkins", "MKM Building Supplies", "Selco",
-  "Buildbase", "Screwfix", "Toolstation", "CCF", "SIG", "Huws Gray",
-  "Bradfords", "National Timber Group", "Parker Building Supplies", "Other",
-];
-
 const SYSTEM_PROMPT = `You are a senior UK quantity surveyor with 25+ years experience producing accurate Bills of Quantities.
 
 OUTPUT RULES — CRITICAL:
 - Output ONLY a single raw JSON object. Start with { end with }
 - No markdown fences, no explanation, no text before or after
 - JSON must be complete and valid — never truncate it
-- Keep item descriptions under 60 characters, max 10 items per category
+- Keep item descriptions under 80 characters
+- Up to 20 items per category — be thorough and detailed
 
 JSON shape (replace all values, keep all keys):
 {"projectName":"","projectType":"","projectRef":"","summary":"","totalCost":0,"laborCost":0,"materialCost":0,"plantCost":0,"prelimsCost":0,"contingency":0,"contingencyPercent":10,"designFees":0,"vatAmount":0,"grandTotal":0,"timeline":"","confidence":"High","confidenceReason":"","notes":[],"exclusions":[],"inclusions":[],"categories":[{"name":"","icon":"","subtotal":0,"items":[{"ref":"","name":"","description":"","quantity":0,"unit":"","unitCost":0,"totalCost":0,"supplier":"","notes":""}]}]}
 
-Rules: UK 2025 prices in GBP. grandTotal = (totalCost + contingency + designFees) * 1.20. vatAmount = (totalCost + contingency + designFees) * 0.20. Suppliers: Jewson, Travis Perkins, Screwfix, Selco.
+Rules: UK 2025 prices in GBP. grandTotal = (totalCost + contingency + designFees) * 1.20. vatAmount = (totalCost + contingency + designFees) * 0.20. Suppliers: Jewson, Travis Perkins, Screwfix, Selco, MKM, Toolstation, Buildbase.
 
-ALWAYS include a "Preliminaries & Site Establishment" category with these items priced for the project duration:
-- Site toilet hire (weekly rate x duration)
-- Site toilet servicing (weekly)
-- Scaffold erection, hire and strike
-- Skip hire (number of loads x duration)
-- Site hoarding / security fencing if required
-- Site manager / foreman (weekly x duration)
-- Tool hire: concrete mixer, dumper, excavator (days/weeks as needed)
-- Power tools hire: angle grinders, drills, saws (weekly)
-- Welfare facilities: hand wash unit, site lighting
+LEVEL OF DETAIL — THIS IS CRITICAL:
+Price every single item down to the smallest component. Do NOT group items together. Every fixing, fitting and consumable gets its own line. Examples of the detail required:
+
+PLUMBING must include individual items such as:
+- 22mm copper pipe (per metre)
+- 15mm copper pipe (per metre)
+- 22mm compression elbows (per nr)
+- 15mm compression elbows (per nr)
+- 22mm compression tee pieces (per nr)
+- 15mm compression tee pieces (per nr)
+- 22mm straight couplings (per nr)
+- 15mm straight couplings (per nr)
+- 22mm gate valves (per nr)
+- 15mm isolating valves (per nr)
+- PTFE tape (per roll)
+- Pipe clips 15mm (per nr)
+- Pipe clips 22mm (per nr)
+- Pipe lagging/insulation (per metre)
+- Soldering flux and solder (per tin)
+- Push-fit fittings where specified
+
+ELECTRICAL must include individual items such as:
+- 2.5mm 3-core & earth cable (per metre)
+- 1.5mm 3-core & earth cable (per metre)
+- 6mm 2-core & earth cable (per metre)
+- 10mm 2-core & earth cable (per metre)
+- 20mm white conduit (per metre)
+- 25mm grey conduit (per metre)
+- Junction boxes (per nr)
+- Back boxes single (per nr)
+- Back boxes double (per nr)
+- Cable clips (per box of 100)
+- Earth sleeving (per metre)
+- Consumer unit with MCBs (per nr)
+- 32A MCB (per nr)
+- 16A MCB (per nr)
+- RCD breaker (per nr)
+- Electrical tape (per roll)
+
+CARPENTRY/JOINERY must include:
+- Screws — specify size e.g. 4x50mm wood screws (per box of 200)
+- Screws — specify size e.g. 3.5x40mm wood screws (per box of 200)
+- Nails — specify e.g. 75mm round wire nails (per kg)
+- Nails — specify e.g. 50mm oval nails (per kg)
+- Joist hangers (per nr)
+- Restraint straps (per nr)
+- Timber connectors/bolts (per nr)
+- Expanding bolts/rawlplugs (per box)
+- Adhesive PVA (per litre)
+- Silicone sealant (per tube)
+- Frame fixings (per box)
+
+MASONRY must include:
+- Bricks (per thousand)
+- Blocks 100mm 7N (per nr or m2)
+- Mortar/sand and cement (per tonne/bags)
+- DPC (per metre roll)
+- Cavity wall ties (per 100)
+- Brick ties stainless (per 100)
+- Wall plugs (per box)
+- Masonry screws (per box)
+
+PLASTERBOARD/DRYLINING must include:
+- Plasterboard sheets 12.5mm (per sheet)
+- Plasterboard screws (per box of 200)
+- Jointing tape (per roll)
+- Joint compound/plaster (per bag)
+- Corner beads (per nr)
+- Angle beads (per nr)
+- Plasterboard adhesive (per bag)
+
+ALWAYS include a "Preliminaries & Site Establishment" category with:
+- Site toilet hire weekly
+- Site toilet servicing weekly
+- Scaffold erect, hire and strike
+- Skip hire per load
+- Concrete mixer hire weekly
+- Mini dumper hire weekly
+- Power tools hire weekly (drills, grinders, saws)
+- Hand wash unit welfare weekly
 - PPE and site safety equipment
-- Insurance and project preliminaries (1-2% of contract value)
-Price all prelim items realistically based on project size and duration.`;
+- Site hoarding/security fencing
+- Insurance and preliminaries (1-2% of contract value)
+
+Price every single item. Leave nothing out. A proper BOQ prices every nail and every tube of sealant.`;
 
 const FAIRHAVEN_SPECS = `PROJECT: Ground floor rear extension + internal refurbishment, 2 Fairhaven Avenue, Chorlton, Manchester M21 8TW. Architect: Darwent Architecture March 2026. Drawings BR007-BR014.
 
@@ -77,7 +131,7 @@ PLUMBING/HEATING: Boiler relocated. New boiler flue. UFH to extension. En-suite:
 EXTERNAL: Indian limestone paving on mortar over 150mm hardcore. 1.8m brick wall + timber fence. New gate. EV charge point.
 FINISHES: Silicone render all new external walls. Re-skim existing hall/stairs/landing. Plasterboard and skim all new walls/ceilings. Black uPVC gutters/downpipes. Code 4 lead flashings.
 EXCLUDE: Kitchen units and appliances (by others). Landscaping/lawn (by others). Window seat joinery (by others). Built-in storage (by others).`;
-// ─── DEMO ESTIMATE ────────────────────────────────────────────────────────────
+
 const DEMO_ESTIMATE = {
   projectName: "Rear Extension — 4m x 5m (DEMO)",
   projectType: "Rear Extension",
@@ -242,10 +296,60 @@ const DEMO_ESTIMATE = {
 };
 
 
+const REGIONS = [
+  { id:"london",     label:"London & SE",         multiplier:1.25 },
+  { id:"southeast",  label:"South East",           multiplier:1.12 },
+  { id:"southwest",  label:"South West",           multiplier:1.05 },
+  { id:"midlands",   label:"Midlands",             multiplier:1.00 },
+  { id:"northwest",  label:"North West",           multiplier:0.97 },
+  { id:"northeast",  label:"North East",           multiplier:0.93 },
+  { id:"yorkshire",  label:"Yorkshire & Humber",   multiplier:0.95 },
+  { id:"wales",      label:"Wales",                multiplier:0.92 },
+  { id:"scotland",   label:"Scotland",             multiplier:0.98 },
+  { id:"nireland",   label:"Northern Ireland",     multiplier:0.90 },
+];
+
+const MERCHANTS = [
+  "Jewson", "Travis Perkins", "MKM Building Supplies", "Selco",
+  "Buildbase", "Screwfix", "Toolstation", "CCF", "SIG", "Huws Gray",
+  "Bradfords", "National Timber Group", "Parker Building Supplies", "Other",
+];
+
+
+port { useState, useRef, useCallback, useEffect } from "react";
+import Head from "next/head";
+
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+
+const PROJECT_TYPES = ["Rear Extension","Loft Conversion","New Build","Basement","Garage Conversion","Refurbishment","Kitchen Fit-out","Bathroom Fit-out","Commercial Fit-out","Groundworks Only","Roofing","Other"];
+const STATUSES = ["Quote Sent","In Discussion","Won","Lost","On Hold"];
+const STATUS_COL = {"Quote Sent":"#f59e0b","In Discussion":"#60a5fa","Won":"#4caf50","Lost":"#ef5350","On Hold":"#888"};
+
+const REGIONS = [
+  { id:"london",     label:"London & SE",         multiplier:1.25 },
+  { id:"southeast",  label:"South East",           multiplier:1.12 },
+  { id:"southwest",  label:"South West",           multiplier:1.05 },
+  { id:"midlands",   label:"Midlands",             multiplier:1.00 },
+  { id:"northwest",  label:"North West",           multiplier:0.97 },
+  { id:"northeast",  label:"North East",           multiplier:0.93 },
+  { id:"yorkshire",  label:"Yorkshire & Humber",   multiplier:0.95 },
+  { id:"wales",      label:"Wales",                multiplier:0.92 },
+  { id:"scotland",   label:"Scotland",             multiplier:0.98 },
+  { id:"nireland",   label:"Northern Ireland",     multiplier:0.90 },
+];
+
+const MERCHANTS = [
+  "Jewson", "Travis Perkins", "MKM Building Supplies", "Selco",
+  "Buildbase", "Screwfix", "Toolstation", "CCF", "SIG", "Huws Gray",
+  "Bradfords", "National Timber Group", "Parker Building Supplies", "Other",
+];
+
+
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
 const C = { bg:"#080807",surface:"#0f0f0e",card:"#121211",border:"#1e1e1c",gold:"#d4a853",text:"#e8e4dc",muted:"#666",dim:"#3a3a38",green:"#4caf50",red:"#ef5350",amber:"#f59e0b" };
+
 const fmt    = n => new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP",maximumFractionDigits:0}).format(n||0);
 const fmtDec = n => new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP",minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
 const uid    = () => Math.random().toString(36).slice(2,9);
@@ -294,6 +398,28 @@ export default function App() {
   const [region,      setRegion]      = useState("northwest");
   const [merchants,   setMerchants]   = useState(["Jewson","Travis Perkins","MKM Building Supplies"]);
   const [showSettings,setShowSettings]= useState(false);
+  // Labour rates — what you pay your lads per day
+  const [labourRates, setLabourRates] = useState({
+    labourer:    { label:"Labourer",          rate:180 },
+    bricklayer:  { label:"Bricklayer",        rate:260 },
+    carpenter:   { label:"Carpenter/Joiner",  rate:250 },
+    electrician: { label:"Electrician",       rate:300 },
+    plumber:     { label:"Plumber/Heating",   rate:290 },
+    plasterer:   { label:"Plasterer",         rate:260 },
+    roofer:      { label:"Roofer",            rate:270 },
+    groundwork:  { label:"Groundworker",      rate:220 },
+  });
+  // Desired profit margin %
+  const [profitMargin, setProfitMargin] = useState(20);
+  // Fixings preferences
+  const [fixings, setFixings] = useState({
+    carpentry:   "screws",   // screws | nails | both
+    framing:     "screws",   // screws | nails | both
+    decking:     "screws",   // screws | nails | both
+    plumbing:    "compression", // compression | soldered | pushfit | mixed
+    pipeMaterial:"copper",   // copper | plastic | mixed
+    electrical:  "clipped",  // clipped | conduit | trunking
+  });
   const fileRef = useRef();
 
   useEffect(()=>{ try{const s=JSON.parse(localStorage.getItem("bc_v3")||"[]");setEstimates(s);}catch{} },[]);
@@ -332,6 +458,14 @@ export default function App() {
         projDesc&&`Description: ${projDesc}`,
         specText,
         exclusions.trim()&&`\nEXCLUDE from BOQ (client has separate prices):\n${exclusions}`,
+        `\nFIXINGS & MATERIALS PREFERENCES (use these throughout the BOQ):
+- Carpentry fixings: ${fixings.carpentry === "both" ? "price both screws AND nails as separate line items" : fixings.carpentry === "screws" ? "use screws throughout (price wood screws, not nails)" : "use nails throughout (price wire nails and oval nails, not screws)"}
+- Structural framing fixings: ${fixings.framing === "both" ? "price both framing screws AND joist hanger nails" : fixings.framing === "screws" ? "use structural framing screws" : "use nails (joist hanger nails, ring shank nails)"}
+- Decking/boarding fixings: ${fixings.decking === "both" ? "price both decking screws AND nails" : fixings.decking === "screws" ? "use stainless decking screws" : "use galvanised nails"}
+- Plumbing fittings: ${fixings.plumbing === "compression" ? "use compression fittings throughout (elbows, tees, couplings all compression type)" : fixings.plumbing === "soldered" ? "use end-feed solder fittings (elbows, tees, couplings all solder type)" : fixings.plumbing === "pushfit" ? "use push-fit fittings throughout (Speedfit or equivalent)" : "mix of compression for accessible locations, solder for concealed"}
+- Pipe material: ${fixings.pipeMaterial === "copper" ? "use copper pipe throughout" : fixings.pipeMaterial === "plastic" ? "use plastic pipe (MDPE/barrier pipe) throughout" : "mix copper and plastic as appropriate"}
+- Electrical cable routing: ${fixings.electrical === "clipped" ? "clip cables directly to surfaces" : fixings.electrical === "conduit" ? "run cables in conduit throughout" : "run cables in trunking throughout"}
+Price all fixings and fittings according to these preferences. Include every individual item.`,
       ].filter(Boolean).join("\n");
 
       // Call our own API route — no CORS issues, key is on the server
@@ -385,9 +519,9 @@ export default function App() {
     <>
       <Head><title>BuildCostAI — Construction Estimating</title><meta name="viewport" content="width=device-width,initial-scale=1"/></Head>
       {view==="landing"   && <Landing   onStart={()=>setView("upload")} onDash={()=>setView("dashboard")} hasEsts={estimates.length>0} />}
-      {view==="upload"    && <UploadScr files={files} setFiles={setFiles} onFiles={handleFiles} fileRef={fileRef} dragOver={dragOver} setDragOver={setDragOver} projType={projType} setProjType={setProjType} projDesc={projDesc} setProjDesc={setProjDesc} clientName={clientName} setClientName={setClientName} clientEmail={clientEmail} setClientEmail={setClientEmail} siteAddr={siteAddr} setSiteAddr={setSiteAddr} siteContact={siteContact} setSiteContact={setSiteContact} siteNotes={siteNotes} setSiteNotes={setSiteNotes} intNote={intNote} setIntNote={setIntNote} exclusions={exclusions} setExclusions={setExclusions} overhead={overhead} setOverhead={setOverhead} region={region} setRegion={setRegion} merchants={merchants} toggleMerchant={toggleMerchant} showSettings={showSettings} setShowSettings={setShowSettings} error={error} onSubmit={runEstimate} onDemo={runDemo} onBack={()=>setView("landing")} />}
+      {view==="upload"    && <UploadScr files={files} setFiles={setFiles} onFiles={handleFiles} fileRef={fileRef} dragOver={dragOver} setDragOver={setDragOver} projType={projType} setProjType={setProjType} projDesc={projDesc} setProjDesc={setProjDesc} clientName={clientName} setClientName={setClientName} clientEmail={clientEmail} setClientEmail={setClientEmail} siteAddr={siteAddr} setSiteAddr={setSiteAddr} siteContact={siteContact} setSiteContact={setSiteContact} siteNotes={siteNotes} setSiteNotes={setSiteNotes} intNote={intNote} setIntNote={setIntNote} exclusions={exclusions} setExclusions={setExclusions} overhead={overhead} setOverhead={setOverhead} region={region} setRegion={setRegion} merchants={merchants} toggleMerchant={toggleMerchant} showSettings={showSettings} setShowSettings={setShowSettings} error={error} onSubmit={runEstimate} onDemo={runDemo} onBack={()=>setView("landing")} fixings={fixings} setFixings={setFixings} />}
       {view==="loading"   && <LoadingScr step={loadStep} />}
-      {view==="results"   && <ResultsScr result={result} expandCat={expandCat} setExpandCat={setExpandCat} activeTab={activeTab} setActiveTab={setActiveTab} onNew={reset} onDash={()=>setView("dashboard")} editMode={editMode} setEditMode={setEditMode} onUpdate={patch=>updateEst(result.id,patch)} onDelete={()=>deleteEst(result.id)} emailModal={emailModal} setEmailModal={setEmailModal} emailSent={emailSent} setEmailSent={setEmailSent} />}
+      {view==="results"   && <ResultsScr result={result} expandCat={expandCat} setExpandCat={setExpandCat} activeTab={activeTab} setActiveTab={setActiveTab} onNew={reset} onDash={()=>setView("dashboard")} editMode={editMode} setEditMode={setEditMode} onUpdate={patch=>updateEst(result.id,patch)} onDelete={()=>deleteEst(result.id)} emailModal={emailModal} setEmailModal={setEmailModal} emailSent={emailSent} setEmailSent={setEmailSent} labourRates={labourRates} setLabourRates={setLabourRates} profitMargin={profitMargin} setProfitMargin={setProfitMargin} />}
       {view==="dashboard" && <DashScr   estimates={estimates} onNew={()=>setView("upload")} onView={e=>{setResult(e);setExpandCat(e.categories?.[0]?.name);setActiveTab("breakdown");setEditMode(false);setView("results");}} onBack={()=>setView("landing")} onStatus={(id,s)=>updateEst(id,{pipelineStatus:s})} onDelete={deleteEst} />}
     </>
   );
@@ -399,9 +533,9 @@ function Nav({onBack,onNew,onDash}){
     <nav style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"15px 22px",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,background:C.bg,zIndex:100}}>
       <div style={{display:"flex",alignItems:"center",gap:9}}><span style={{color:C.gold}}>⬛</span><span style={{fontSize:18,fontWeight:700,letterSpacing:"-0.5px"}}>BuildCost<span style={{color:C.gold}}>AI</span></span></div>
       <div style={{display:"flex",gap:6}}>
-        {onDash&&<button style={s.navLnk} onClick={onDash}>📊 Dashboard</button>}
-        {onNew &&<button style={s.navBtn}  onClick={onNew}>+ New Estimate</button>}
-        {onBack&&<button style={s.navLnk} onClick={onBack}>← Back</button>}
+        {onDash&&<button style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:13,padding:"7px 9px"}} onClick={onDash}>📊 Dashboard</button>}
+        {onNew &&<button style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,cursor:"pointer",fontSize:12,padding:"6px 13px",borderRadius:6}}  onClick={onNew}>+ New Estimate</button>}
+        {onBack&&<button style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:13,padding:"7px 9px"}} onClick={onBack}>← Back</button>}
       </div>
     </nav>
   );
@@ -418,8 +552,8 @@ function Landing({onStart,onDash,hasEsts}){
           <h1 className="fu d1" style={{fontSize:"clamp(28px,5vw,54px)",fontWeight:700,lineHeight:1.1,letterSpacing:"-2px",marginBottom:20}}>Construction Estimates<br/><em style={{fontStyle:"italic",color:C.gold}}>In Under 60 Seconds.</em></h1>
           <p className="fu d2" style={{fontSize:15,color:C.muted,lineHeight:1.8,marginBottom:30,maxWidth:480}}>Upload your drawings. Our AI reads every dimension, calculates every material, and delivers a fully priced Bill of Quantities. 6× cheaper than traditional estimating services.</p>
           <div className="fu d3" style={{display:"flex",gap:12,marginBottom:44,flexWrap:"wrap"}}>
-            <button style={s.cta} onClick={onStart} className="glow">Get Your Estimate →</button>
-            {hasEsts&&<button style={s.ghost} onClick={onDash}>View Dashboard</button>}
+            <button style={{background:C.gold,color:"#080807",border:"none",padding:"14px 30px",fontSize:15,fontWeight:700,borderRadius:4,cursor:"pointer"}} onClick={onStart} className="glow">Get Your Estimate →</button>
+            {hasEsts&&<button style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer"}} onClick={onDash}>View Dashboard</button>}
           </div>
           <div className="fu d4" style={{display:"flex",gap:28,flexWrap:"wrap"}}>
             {[["£49","Starting from"],["60s","Turnaround"],["100%","Itemised BOQ"],["£300+","Saved vs rivals"]].map(([v,l])=>(
@@ -483,12 +617,13 @@ function Coll({icon,title,sub,open,setOpen,highlight,children}){
   );
 }
 
-function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType,setProjType,projDesc,setProjDesc,clientName,setClientName,clientEmail,setClientEmail,siteAddr,setSiteAddr,siteContact,setSiteContact,siteNotes,setSiteNotes,intNote,setIntNote,exclusions,setExclusions,overhead,setOverhead,region,setRegion,merchants,toggleMerchant,showSettings,setShowSettings,error,onSubmit,onDemo,onBack}){
+function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType,setProjType,projDesc,setProjDesc,clientName,setClientName,clientEmail,setClientEmail,siteAddr,setSiteAddr,siteContact,setSiteContact,siteNotes,setSiteNotes,intNote,setIntNote,exclusions,setExclusions,overhead,setOverhead,region,setRegion,merchants,toggleMerchant,showSettings,setShowSettings,error,onSubmit,onDemo,onBack,fixings,setFixings}){
   const [openSite,setOpenSite]=useState(false);
   const [openExcl,setOpenExcl]=useState(false);
   const [openNote,setOpenNote]=useState(false);
   const [openOH,  setOpenOH  ]=useState(false);
   const [openReg, setOpenReg ]=useState(false);
+  const [openFix, setOpenFix ]=useState(false);
   return(
     <div style={{minHeight:"100vh",background:C.bg,color:C.text}}>
       <Nav onBack={onBack}/>
@@ -506,7 +641,7 @@ function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType
           <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px 16px",marginBottom:18}}>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
               <span style={{fontSize:13,fontWeight:600}}>📁 {files.length} file{files.length>1?"s":""} ready</span>
-              <button style={s.lnkBtn} onClick={()=>setFiles([])}>Remove all</button>
+              <button style={{background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0}} onClick={()=>setFiles([])}>Remove all</button>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:180,overflowY:"auto"}}>
               {files.map((f,i)=>(
@@ -518,33 +653,33 @@ function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType
                 </div>
               ))}
             </div>
-            <button style={{...s.lnkBtn,marginTop:10}} onClick={()=>fileRef.current.click()}>+ Add more files</button>
+            <button style={{...{background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0},marginTop:10}} onClick={()=>fileRef.current.click()}>+ Add more files</button>
           </div>
         )}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}} className="g2">
-          <div style={{marginBottom:14}}><label style={s.lbl}>Client Name</label><input style={s.inp} placeholder="Mr & Mrs Johnson" value={clientName} onChange={e=>setClientName(e.target.value)}/></div>
-          <div style={{marginBottom:14}}><label style={s.lbl}>Client Email</label><input style={s.inp} type="email" placeholder="client@email.com" value={clientEmail} onChange={e=>setClientEmail(e.target.value)}/></div>
+          <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Client Name</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} placeholder="Mr & Mrs Johnson" value={clientName} onChange={e=>setClientName(e.target.value)}/></div>
+          <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Client Email</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} type="email" placeholder="client@email.com" value={clientEmail} onChange={e=>setClientEmail(e.target.value)}/></div>
         </div>
-        <div style={{marginBottom:14}}><label style={s.lbl}>Project Type</label>
-          <select style={s.inp} value={projType} onChange={e=>setProjType(e.target.value)}>
+        <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Project Type</label>
+          <select style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} value={projType} onChange={e=>setProjType(e.target.value)}>
             <option value="">Select…</option>{PROJECT_TYPES.map(t=><option key={t}>{t}</option>)}
           </select>
         </div>
-        <div style={{marginBottom:14}}><label style={s.lbl}>Project Description</label>
-          <textarea style={{...s.inp,resize:"vertical",lineHeight:1.7,minHeight:100}} rows={4} value={projDesc} onChange={e=>setProjDesc(e.target.value)} placeholder="e.g. Single storey rear extension, 4m x 5m, brick and block cavity wall, flat roof, bi-fold doors, UFH throughout…"/>
+        <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Project Description</label>
+          <textarea style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical",lineHeight:1.7,minHeight:100}} rows={4} value={projDesc} onChange={e=>setProjDesc(e.target.value)} placeholder="e.g. Single storey rear extension, 4m x 5m, brick and block cavity wall, flat roof, bi-fold doors, UFH throughout…"/>
         </div>
         <Coll icon="📍" title="Site Details" sub="Address, contact & access notes" open={openSite} setOpen={setOpenSite}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}} className="g2">
-            <div><label style={s.lbl}>Site Address</label><input style={s.inp} placeholder="12 Elm St, Manchester" value={siteAddr} onChange={e=>setSiteAddr(e.target.value)}/></div>
-            <div><label style={s.lbl}>Site Contact</label><input style={s.inp} placeholder="Name & phone" value={siteContact} onChange={e=>setSiteContact(e.target.value)}/></div>
+            <div><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Site Address</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} placeholder="12 Elm St, Manchester" value={siteAddr} onChange={e=>setSiteAddr(e.target.value)}/></div>
+            <div><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Site Contact</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} placeholder="Name & phone" value={siteContact} onChange={e=>setSiteContact(e.target.value)}/></div>
           </div>
-          <div><label style={s.lbl}>Access Notes</label><textarea style={{...s.inp,resize:"vertical"}} rows={2} value={siteNotes} onChange={e=>setSiteNotes(e.target.value)}/></div>
+          <div><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Access Notes</label><textarea style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={2} value={siteNotes} onChange={e=>setSiteNotes(e.target.value)}/></div>
         </Coll>
         {/* Region & Merchants */}
         <Coll icon="📍" title={`Region & Pricing Area — ${REGIONS.find(r=>r.id===region)?.label||"North West"}`} sub="Adjusts all rates for your local market" open={openReg} setOpen={setOpenReg} highlight>
           <div style={{marginBottom:16}}>
-            <label style={s.lbl}>Your Region</label>
-            <select style={s.inp} value={region} onChange={e=>setRegion(e.target.value)}>
+            <label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Your Region</label>
+            <select style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} value={region} onChange={e=>setRegion(e.target.value)}>
               {REGIONS.map(r=>(
                 <option key={r.id} value={r.id}>
                   {r.label} ({r.multiplier>=1?"+":""}{Math.round((r.multiplier-1)*100)}% vs national average)
@@ -556,7 +691,7 @@ function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType
             </div>
           </div>
           <div>
-            <label style={s.lbl}>Your Building Merchants <span style={{color:C.dim,fontWeight:400}}>(tick all you use)</span></label>
+            <label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Your Building Merchants <span style={{color:C.dim,fontWeight:400}}>(tick all you use)</span></label>
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:4}}>
               {MERCHANTS.map(m=>{
                 const active=merchants.includes(m);
@@ -575,10 +710,10 @@ function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType
         </Coll>
 
         <Coll icon="🚫" title="Items to Exclude" sub="Remove anything the customer has priced elsewhere" open={openExcl} setOpen={setOpenExcl}>
-          <textarea style={{...s.inp,resize:"vertical"}} rows={3} value={exclusions} onChange={e=>setExclusions(e.target.value)} placeholder={"e.g.\n- Windows and doors (customer has separate quote)\n- Kitchen units and appliances"}/>
+          <textarea style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={3} value={exclusions} onChange={e=>setExclusions(e.target.value)} placeholder={"e.g.\n- Windows and doors (customer has separate quote)\n- Kitchen units and appliances"}/>
         </Coll>
         <Coll icon="💬" title="Internal Notes" sub="Private notes — never shown to client" open={openNote} setOpen={setOpenNote}>
-          <textarea style={{...s.inp,resize:"vertical"}} rows={3} value={intNote} onChange={e=>setIntNote(e.target.value)} placeholder="e.g. Client flexible on budget. Check groundworks depth."/>
+          <textarea style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={3} value={intNote} onChange={e=>setIntNote(e.target.value)} placeholder="e.g. Client flexible on budget. Check groundworks depth."/>
         </Coll>
         <Coll icon="🔒" title={`Office & Overhead Markup — ${overhead}%`} sub="Baked silently into all costs, never visible to client" open={openOH} setOpen={setOpenOH} highlight>
           <p style={{fontSize:13,color:C.muted,lineHeight:1.7,marginBottom:14}}>Covers office running costs, estimating time and profit margin. <strong style={{color:C.text}}>Baked into every line item</strong> — client never sees this figure.</p>
@@ -594,6 +729,73 @@ function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType
             ))}
           </div>
         </Coll>
+        {/* ── FIXINGS PREFERENCES ─────────────────────────────────── */}
+        <Coll icon="🔧" title="Fixings & Materials Preferences" sub="Set your preferred fixings — screws vs nails, pipe fittings etc" open={openFix} setOpen={setOpenFix}>
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+
+            <div>
+              <label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:8,color:"#bbb"}}>🪵 Carpentry Fixings</label>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {[["screws","Screws"],["nails","Nails"],["both","Price Both"]].map(([v,l])=>(
+                  <button key={v} onClick={()=>setFixings(p=>({...p,carpentry:v}))}
+                    style={{background:fixings.carpentry===v?C.gold:"#1a1a18",color:fixings.carpentry===v?"#080807":C.muted,border:`1px solid ${fixings.carpentry===v?C.gold:C.border}`,padding:"8px 16px",borderRadius:20,fontSize:13,cursor:"pointer"}}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:8,color:"#bbb"}}>🏗️ Structural Framing Fixings</label>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {[["screws","Framing Screws"],["nails","Nails"],["both","Price Both"]].map(([v,l])=>(
+                  <button key={v} onClick={()=>setFixings(p=>({...p,framing:v}))}
+                    style={{background:fixings.framing===v?C.gold:"#1a1a18",color:fixings.framing===v?"#080807":C.muted,border:`1px solid ${fixings.framing===v?C.gold:C.border}`,padding:"8px 16px",borderRadius:20,fontSize:13,cursor:"pointer"}}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:8,color:"#bbb"}}>🚿 Plumbing Fittings</label>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {[["compression","Compression"],["soldered","Solder/End-feed"],["pushfit","Push-fit"],["mixed","Mixed"]].map(([v,l])=>(
+                  <button key={v} onClick={()=>setFixings(p=>({...p,plumbing:v}))}
+                    style={{background:fixings.plumbing===v?C.gold:"#1a1a18",color:fixings.plumbing===v?"#080807":C.muted,border:`1px solid ${fixings.plumbing===v?C.gold:C.border}`,padding:"8px 16px",borderRadius:20,fontSize:13,cursor:"pointer"}}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:8,color:"#bbb"}}>🪠 Pipe Material</label>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {[["copper","Copper"],["plastic","Plastic (MDPE)"],["mixed","Mixed"]].map(([v,l])=>(
+                  <button key={v} onClick={()=>setFixings(p=>({...p,pipeMaterial:v}))}
+                    style={{background:fixings.pipeMaterial===v?C.gold:"#1a1a18",color:fixings.pipeMaterial===v?"#080807":C.muted,border:`1px solid ${fixings.pipeMaterial===v?C.gold:C.border}`,padding:"8px 16px",borderRadius:20,fontSize:13,cursor:"pointer"}}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:8,color:"#bbb"}}>🔌 Electrical Cable Routing</label>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {[["clipped","Clipped Direct"],["conduit","In Conduit"],["trunking","In Trunking"]].map(([v,l])=>(
+                  <button key={v} onClick={()=>setFixings(p=>({...p,electrical:v}))}
+                    style={{background:fixings.electrical===v?C.gold:"#1a1a18",color:fixings.electrical===v?"#080807":C.muted,border:`1px solid ${fixings.electrical===v?C.gold:C.border}`,padding:"8px 16px",borderRadius:20,fontSize:13,cursor:"pointer"}}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </Coll>
+
         {error&&<div style={{background:"#2a1212",border:"1px solid #5a2020",borderRadius:8,padding:"12px 16px",marginBottom:16,fontSize:13,color:"#ff8080"}}>⚠️ {error}</div>}
 
         {/* Demo mode banner */}
@@ -610,7 +812,7 @@ function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType
           </button>
         </div>
 
-        <button style={s.submitBtn} onClick={onSubmit} className="glow">🔍 Analyse & Generate Estimate →</button>
+        <button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"}} onClick={onSubmit} className="glow">🔍 Analyse & Generate Estimate →</button>
         <p style={{color:C.dim,fontSize:11,textAlign:"center",marginTop:12,lineHeight:1.6}}>AI estimates are indicative. Always verify with a qualified QS for tender purposes.</p>
       </div>
     </div>
@@ -636,16 +838,26 @@ function LoadingScr({step}){
 }
 
 // ─── RESULTS ──────────────────────────────────────────────────────────────────
-function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,onDash,editMode,setEditMode,onUpdate,onDelete,emailModal,setEmailModal,emailSent,setEmailSent}){
+function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,onDash,editMode,setEditMode,onUpdate,onDelete,emailModal,setEmailModal,emailSent,setEmailSent,labourRates,setLabourRates,profitMargin,setProfitMargin}){
   const [editRes,setEditRes]=useState(result);
   const [delConfirm,setDelConfirm]=useState(false);
   const [noteVal,setNoteVal]=useState(result?._internalNote||"");
   const [noteSaved,setNoteSaved]=useState(false);
+  const [showProfit,setShowProfit]=useState(false);
+  const [showLabour,setShowLabour]=useState(false);
   useEffect(()=>{setEditRes(result);setNoteVal(result?._internalNote||"");},[result]);
   if(!result)return null;
   const r=editMode?editRes:result;
   const confCol={High:C.green,Medium:C.amber,Low:C.red}[r.confidence]||C.muted;
   const saveEdits=()=>{onUpdate(editRes);setEditMode(false);};
+
+  // Profit calculations — private, never shown to client
+  const exVAT = (r.grandTotal||r.totalCost) / 1.2;
+  const totalCosts = r.totalCost || 0;
+  const profitAmount = Math.round(totalCosts * (profitMargin / 100));
+  const chargeToClient = totalCosts + profitAmount;
+  const chargeIncVAT = Math.round(chargeToClient * 1.2);
+  const actualLabour = r.laborCost || 0;
   const editItem=(catName,idx,field,val)=>{
     const cats=editRes.categories.map(cat=>{
       if(cat.name!==catName)return cat;
@@ -695,9 +907,92 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
         </div>
         <div style={{background:"#0f0e09",border:`1px solid ${C.gold}28`,borderRadius:10,padding:"14px 16px",marginBottom:20}} className="no-print">
           <div style={{fontSize:10,color:C.gold,letterSpacing:2,marginBottom:8,fontFamily:"monospace"}}>🔒 INTERNAL NOTES — NOT VISIBLE TO CLIENT</div>
-          <textarea style={{...s.inp,marginBottom:8,background:"#0a0908",resize:"vertical"}} rows={2} value={noteVal} onChange={e=>setNoteVal(e.target.value)} placeholder="Add private notes…"/>
-          <button style={{...s.lnkBtn,...(noteSaved?{color:C.green}:{})}} onClick={saveNote}>{noteSaved?"✓ Saved":"Save note"}</button>
+          <textarea style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},marginBottom:8,background:"#0a0908",resize:"vertical"}} rows={2} value={noteVal} onChange={e=>setNoteVal(e.target.value)} placeholder="Add private notes…"/>
+          <button style={{...{background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0},...(noteSaved?{color:C.green}:{})}} onClick={saveNote}>{noteSaved?"✓ Saved":"Save note"}</button>
         </div>
+        {/* ── PROFIT MARGIN PANEL ── private, no-print ─────────────────── */}
+        <div style={{background:"#0a0f0a",border:`1px solid ${C.green}30`,borderRadius:10,padding:"14px 16px",marginBottom:12}} className="no-print">
+          <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={()=>setShowProfit(v=>!v)}>
+            <span style={{fontSize:18}}>💰</span>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:600,fontSize:14}}>Profit Margin — {profitMargin}%</div>
+              <div style={{fontSize:11,color:C.muted,marginTop:2}}>Your profit on this job — never shown to client</div>
+            </div>
+            <div style={{color:C.green,fontWeight:700,fontSize:16}}>{fmt(profitAmount)}</div>
+            <span style={{color:C.dim,fontSize:11,marginLeft:6}}>{showProfit?"▲":"▼"}</span>
+          </div>
+          {showProfit&&(
+            <div style={{borderTop:`1px solid ${C.border}`,marginTop:14,paddingTop:14}}>
+              <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+                <span style={{fontSize:12,color:C.dim}}>0%</span>
+                <input type="range" min={0} max={50} step={1} value={profitMargin} onChange={e=>setProfitMargin(Number(e.target.value))} style={{flex:1,accentColor:C.green}}/>
+                <span style={{fontSize:12,color:C.dim}}>50%</span>
+                <div style={{background:C.green,color:"#080807",fontWeight:700,fontSize:16,padding:"5px 13px",borderRadius:6,minWidth:48,textAlign:"center"}}>{profitMargin}%</div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+                {[
+                  ["Cost of Works (ex VAT)",fmt(totalCosts),"Your actual cost"],
+                  ["Profit ("+profitMargin+"%)",fmt(profitAmount),"Your margin"],
+                  ["Charge to Client (ex VAT)",fmt(chargeToClient),"What to quote"],
+                  ["Charge to Client (inc VAT)",fmt(chargeIncVAT),"Final client price"],
+                ].map(([l,v,sub])=>(
+                  <div key={l} style={{background:"#111",border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 14px"}}>
+                    <div style={{fontSize:10,color:C.dim,marginBottom:3}}>{l}</div>
+                    <div style={{fontSize:16,fontWeight:700,color:C.green}}>{v}</div>
+                    <div style={{fontSize:10,color:C.dim,marginTop:2}}>{sub}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{fontSize:11,color:C.dim,lineHeight:1.6}}>
+                💡 The overhead markup you set at quote stage has already been baked into the BOQ rates. This profit margin is on top of that — pure profit after all costs.
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── LABOUR BREAKDOWN ── editable day rates ────────────────────── */}
+        <div style={{background:"#0a0a0f",border:`1px solid #60a5fa30`,borderRadius:10,padding:"14px 16px",marginBottom:20}} className="no-print">
+          <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={()=>setShowLabour(v=>!v)}>
+            <span style={{fontSize:18}}>👷</span>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:600,fontSize:14}}>Labour Breakdown</div>
+              <div style={{fontSize:11,color:C.muted,marginTop:2}}>Set what you pay your lads — adjusts labour costs</div>
+            </div>
+            <div style={{color:"#60a5fa",fontWeight:700,fontSize:16}}>{fmt(actualLabour)}</div>
+            <span style={{color:C.dim,fontSize:11,marginLeft:6}}>{showLabour?"▲":"▼"}</span>
+          </div>
+          {showLabour&&(
+            <div style={{borderTop:`1px solid ${C.border}`,marginTop:14,paddingTop:14}}>
+              <p style={{fontSize:12,color:C.muted,marginBottom:14,lineHeight:1.6}}>
+                Set your actual day rates below. The AI estimated labour at <strong style={{color:C.text}}>{fmt(actualLabour)}</strong> based on UK averages. Adjust to match what you pay — your margin section above will update accordingly.
+              </p>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+                {Object.entries(labourRates).map(([key,{label,rate}])=>(
+                  <div key={key} style={{background:"#111",border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 14px"}}>
+                    <div style={{fontSize:11,color:C.muted,marginBottom:6}}>{label}</div>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <span style={{fontSize:13,color:C.dim}}>£</span>
+                      <input type="number" value={rate}
+                        onChange={e=>setLabourRates(prev=>({...prev,[key]:{...prev[key],rate:Number(e.target.value)||0}}))}
+                        style={{flex:1,background:"#0a0a0a",border:`1px solid ${C.border}`,borderRadius:5,padding:"6px 8px",color:C.text,fontSize:14,fontWeight:700,width:"100%"}}/>
+                      <span style={{fontSize:11,color:C.dim}}>/day</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{background:"#111",border:`1px solid ${C.border}`,borderRadius:8,padding:"12px 14px"}}>
+                <div style={{fontSize:11,color:C.dim,marginBottom:4}}>Average day rate across all trades</div>
+                <div style={{fontSize:20,fontWeight:700,color:"#60a5fa"}}>
+                  £{Math.round(Object.values(labourRates).reduce((s,{rate})=>s+rate,0)/Object.values(labourRates).length)}/day
+                </div>
+              </div>
+              <p style={{fontSize:11,color:C.dim,marginTop:10,lineHeight:1.5}}>
+                💡 To recalculate the full BOQ with your exact rates, generate a new estimate and include your day rates in the project description.
+              </p>
+            </div>
+          )}
+        </div>
+
         <div style={{display:"flex",gap:2,marginBottom:22,borderBottom:`1px solid ${C.border}`,overflowX:"auto"}} className="no-print">
           {[["breakdown","📋 Full BOQ"],["inclusions","✓ Inclusions"],["exclusions","✗ Exclusions"],["notes","📝 Notes"]].map(([t,l])=>(
             <button key={t} style={{background:"none",border:"none",borderBottom:`2px solid ${activeTab===t?C.gold:"transparent"}`,color:activeTab===t?C.gold:C.muted,padding:"11px 14px",cursor:"pointer",fontSize:13,whiteSpace:"nowrap",marginBottom:-1}} onClick={()=>setActiveTab(t)}>{l}</button>
@@ -760,8 +1055,8 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
         {activeTab==="exclusions"&&<ListTab items={r.exclusions} title="Exclusions" col={C.red} sym="✗"/>}
         {activeTab==="notes"&&<ListTab items={r.notes} title="Estimator Notes" col={C.gold} sym="•"/>}
         <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:24}} className="no-print">
-          <button style={s.submitBtn} onClick={()=>window.print()}>🖨️ Print / Save as PDF</button>
-          <div style={{display:"flex",gap:10}}><button style={{...s.ghostBtn,flex:1}} onClick={onNew}>+ New Estimate</button><button style={{...s.ghostBtn,flex:1}} onClick={onDash}>📊 Dashboard</button></div>
+          <button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"}} onClick={()=>window.print()}>🖨️ Print / Save as PDF</button>
+          <div style={{display:"flex",gap:10}}><button style={{...{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer"}Btn,flex:1}} onClick={onNew}>+ New Estimate</button><button style={{...{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer"}Btn,flex:1}} onClick={onDash}>📊 Dashboard</button></div>
         </div>
       </div>
       {emailModal&&(
@@ -769,13 +1064,13 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
           <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:26,width:"100%",maxWidth:520,maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
             <h3 style={{fontSize:19,fontWeight:700,marginBottom:16}}>📧 Email Estimate to Client</h3>
             {emailSent?(
-              <div style={{textAlign:"center",padding:"24px 0"}}><div style={{fontSize:44,marginBottom:10}}>✅</div><div style={{fontSize:16,fontWeight:700,marginBottom:6}}>Estimate sent!</div><button style={s.submitBtn} onClick={()=>{setEmailModal(false);setEmailSent(false);}}>Close</button></div>
+              <div style={{textAlign:"center",padding:"24px 0"}}><div style={{fontSize:44,marginBottom:10}}>✅</div><div style={{fontSize:16,fontWeight:700,marginBottom:6}}>Estimate sent!</div><button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"}} onClick={()=>{setEmailModal(false);setEmailSent(false);}}>Close</button></div>
             ):(
               <>
-                <div style={{marginBottom:14}}><label style={s.lbl}>To</label><input style={s.inp} defaultValue={r._clientEmail} placeholder="client@email.com"/></div>
-                <div style={{marginBottom:14}}><label style={s.lbl}>Subject</label><input style={s.inp} defaultValue={`Estimate: ${r.projectName} — ${fmt(r.grandTotal||r.totalCost)}`}/></div>
-                <div style={{marginBottom:14}}><label style={s.lbl}>Message</label><textarea style={{...s.inp,resize:"vertical"}} rows={5} defaultValue={`Dear ${r._clientName||"Client"},\n\nPlease find your construction estimate for ${r.projectName}.\n\nTotal: ${fmt(r.grandTotal||r.totalCost)} inc. VAT\nTimeline: ${r.timeline}\n\nKind regards,\nBuildCostAI`}/></div>
-                <div style={{display:"flex",gap:10}}><button style={{...s.ghostBtn,flex:1}} onClick={()=>setEmailModal(false)}>Cancel</button><button style={{...s.submitBtn,flex:2}} onClick={()=>setEmailSent(true)}>Send Estimate 📧</button></div>
+                <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>To</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} defaultValue={r._clientEmail} placeholder="client@email.com"/></div>
+                <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Subject</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} defaultValue={`Estimate: ${r.projectName} — ${fmt(r.grandTotal||r.totalCost)}`}/></div>
+                <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Message</label><textarea style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={5} defaultValue={`Dear ${r._clientName||"Client"},\n\nPlease find your construction estimate for ${r.projectName}.\n\nTotal: ${fmt(r.grandTotal||r.totalCost)} inc. VAT\nTimeline: ${r.timeline}\n\nKind regards,\nBuildCostAI`}/></div>
+                <div style={{display:"flex",gap:10}}><button style={{...{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer"}Btn,flex:1}} onClick={()=>setEmailModal(false)}>Cancel</button><button style={{...{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"},flex:2}} onClick={()=>setEmailSent(true)}>Send Estimate 📧</button></div>
               </>
             )}
           </div>
@@ -787,7 +1082,7 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
             <div style={{fontSize:38,marginBottom:10}}>🗑</div>
             <h3 style={{fontSize:17,fontWeight:700,marginBottom:8}}>Delete this estimate?</h3>
             <p style={{color:C.muted,fontSize:13,marginBottom:22}}>This cannot be undone.</p>
-            <div style={{display:"flex",gap:10}}><button style={{...s.ghostBtn,flex:1}} onClick={()=>setDelConfirm(false)}>Cancel</button><button style={{...s.submitBtn,flex:1,background:C.red}} onClick={()=>{setDelConfirm(false);onDelete();}}>Delete</button></div>
+            <div style={{display:"flex",gap:10}}><button style={{...{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer"}Btn,flex:1}} onClick={()=>setDelConfirm(false)}>Cancel</button><button style={{...{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"},flex:1,background:C.red}} onClick={()=>{setDelConfirm(false);onDelete();}}>Delete</button></div>
           </div>
         </div>
       )}
@@ -823,16 +1118,16 @@ function DashScr({estimates,onNew,onView,onBack,onStatus,onDelete}){
         <div style={{display:"flex",gap:7,marginBottom:16,overflowX:"auto",paddingBottom:4}}>
           {["All",...STATUSES].map(st=>{const cnt=st==="All"?estimates.length:estimates.filter(e=>e.pipelineStatus===st).length;const col=STATUS_COL[st]||C.gold;return(<button key={st} style={{background:filter===st?(st==="All"?C.gold:col):"transparent",color:filter===st?"#080807":C.muted,border:`1px solid ${filter===st?(st==="All"?C.gold:col):C.border}`,padding:"7px 14px",borderRadius:20,cursor:"pointer",fontSize:12,whiteSpace:"nowrap"}} onClick={()=>setFilter(st)}>{st} ({cnt})</button>);})}
         </div>
-        <input style={{...s.inp,marginBottom:18}} placeholder="🔍 Search project or client…" value={search} onChange={e=>setSearch(e.target.value)}/>
+        <input style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},marginBottom:18}} placeholder="🔍 Search project or client…" value={search} onChange={e=>setSearch(e.target.value)}/>
         {estimates.length===0?(
-          <div style={{textAlign:"center",padding:"60px 24px"}}><div style={{fontSize:52,marginBottom:14}}>📊</div><h3 style={{color:C.muted,marginBottom:8}}>No estimates yet</h3><button style={s.submitBtn} onClick={onNew}>Create First Estimate →</button></div>
+          <div style={{textAlign:"center",padding:"60px 24px"}}><div style={{fontSize:52,marginBottom:14}}>📊</div><h3 style={{color:C.muted,marginBottom:8}}>No estimates yet</h3><button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"}} onClick={onNew}>Create First Estimate →</button></div>
         ):(
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {filtered.map(est=>{const sc=STATUS_COL[est.pipelineStatus]||C.muted;return(
               <div key={est.id} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",cursor:"pointer"}} className="fc" onClick={()=>onView(est)}>
                 <div style={{flex:1,minWidth:160}}><div style={{fontWeight:700,fontSize:14,marginBottom:3}}>{est.projectName||"Unnamed"}</div><div style={{fontSize:11,color:C.muted}}>{est._clientName&&`👤 ${est._clientName}  `}{est.date&&`📅 ${est.date}`}</div></div>
                 <div style={{fontSize:18,fontWeight:700,color:C.gold,flexShrink:0}}>{fmt(est.grandTotal||est.totalCost)}</div>
-                <select style={{...s.inp,width:"auto",fontSize:12,padding:"5px 8px",color:sc,background:C.card}} value={est.pipelineStatus||"Quote Sent"} onChange={e=>{e.stopPropagation();onStatus(est.id,e.target.value);}}>
+                <select style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},width:"auto",fontSize:12,padding:"5px 8px",color:sc,background:C.card}} value={est.pipelineStatus||"Quote Sent"} onChange={e=>{e.stopPropagation();onStatus(est.id,e.target.value);}}>
                   {STATUSES.map(st=><option key={st}>{st}</option>)}
                 </select>
                 <button style={{background:"none",border:`1px solid ${C.red}44`,color:C.red,padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:12,flexShrink:0}} onClick={e=>{e.stopPropagation();onDelete(est.id);}}>🗑</button>
@@ -844,76 +1139,3 @@ function DashScr({estimates,onNew,onView,onBack,onStatus,onDelete}){
     </div>
   );
 }
-
-// ─── SHARED STYLES ────────────────────────────────────────────────────────────
-const s = {
-  navLnk: {background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:13,padding:"7px 9px"},
-  navBtn:  {background:"none",border:`1px solid ${C.border}`,color:C.muted,cursor:"pointer",fontSize:12,padding:"6px 13px",borderRadius:6},
-  cta:     {background:C.gold,color:"#080807",border:"none",padding:"14px 30px",fontSize:15,fontWeight:700,borderRadius:4,cursor:"pointer"},
-  ghost:   {background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer"},
-  lbl:     {display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"},
-  inp:     {width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},
-  submitBtn:{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"},
-  ghostBtn: {width:"100%",background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:14,fontSize:14,borderRadius:6,cursor:"pointer"},
-  lnkBtn:  {background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0},
-  card:    C.card,
-};
-function DashScr({estimates,onNew,onView,onBack,onStatus,onDelete}){
-  const [search,setSearch]=useState("");
-  const [filter,setFilter]=useState("All");
-  const totalVal=estimates.reduce((a,e)=>a+(e.grandTotal||e.totalCost||0),0);
-  const wonVal=estimates.filter(e=>e.pipelineStatus==="Won").reduce((a,e)=>a+(e.grandTotal||e.totalCost||0),0);
-  const wonCount=estimates.filter(e=>e.pipelineStatus==="Won").length;
-  const filtered=estimates.filter(e=>filter==="All"||e.pipelineStatus===filter).filter(e=>!search||[e.projectName,e._clientName,e._siteAddr].some(v=>v?.toLowerCase().includes(search.toLowerCase())));
-  return(
-    <div style={{minHeight:"100vh",background:C.bg,color:C.text}}>
-      <Nav onBack={onBack} onNew={onNew}/>
-      <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 80px"}}>
-        <div style={{padding:"36px 0 24px"}}><div style={{fontSize:10,letterSpacing:3,color:C.gold,marginBottom:14,fontFamily:"monospace"}}>DASHBOARD</div><h2 style={{fontSize:"clamp(24px,4vw,34px)",fontWeight:700,letterSpacing:"-1px"}}>Job Pipeline</h2></div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12,marginBottom:28}}>
-          {[["Pipeline",fmt(totalVal),"All estimates",C.gold],["Won",fmt(wonVal),`${wonCount} job${wonCount!==1?"s":""}`,C.green],["Estimates",estimates.length,"Saved","#60a5fa"],["Active",estimates.filter(e=>!["Won","Lost"].includes(e.pipelineStatus)).length,"In progress",C.amber]].map(([l,v,sub,col])=>(
-            <div key={l} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"16px 18px"}}>
-              <div style={{fontSize:10,color:C.muted,letterSpacing:1,marginBottom:5}}>{l}</div>
-              <div style={{fontSize:24,fontWeight:700,color:col,marginBottom:2}}>{v}</div>
-              <div style={{fontSize:11,color:C.dim}}>{sub}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{display:"flex",gap:7,marginBottom:16,overflowX:"auto",paddingBottom:4}}>
-          {["All",...STATUSES].map(st=>{const cnt=st==="All"?estimates.length:estimates.filter(e=>e.pipelineStatus===st).length;const col=STATUS_COL[st]||C.gold;return(<button key={st} style={{background:filter===st?(st==="All"?C.gold:col):"transparent",color:filter===st?"#080807":C.muted,border:`1px solid ${filter===st?(st==="All"?C.gold:col):C.border}`,padding:"7px 14px",borderRadius:20,cursor:"pointer",fontSize:12,whiteSpace:"nowrap"}} onClick={()=>setFilter(st)}>{st} ({cnt})</button>);})}
-        </div>
-        <input style={{...s.inp,marginBottom:18}} placeholder="🔍 Search project or client…" value={search} onChange={e=>setSearch(e.target.value)}/>
-        {estimates.length===0?(
-          <div style={{textAlign:"center",padding:"60px 24px"}}><div style={{fontSize:52,marginBottom:14}}>📊</div><h3 style={{color:C.muted,marginBottom:8}}>No estimates yet</h3><button style={s.submitBtn} onClick={onNew}>Create First Estimate →</button></div>
-        ):(
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {filtered.map(est=>{const sc=STATUS_COL[est.pipelineStatus]||C.muted;return(
-              <div key={est.id} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",cursor:"pointer"}} className="fc" onClick={()=>onView(est)}>
-                <div style={{flex:1,minWidth:160}}><div style={{fontWeight:700,fontSize:14,marginBottom:3}}>{est.projectName||"Unnamed"}</div><div style={{fontSize:11,color:C.muted}}>{est._clientName&&`👤 ${est._clientName}  `}{est.date&&`📅 ${est.date}`}</div></div>
-                <div style={{fontSize:18,fontWeight:700,color:C.gold,flexShrink:0}}>{fmt(est.grandTotal||est.totalCost)}</div>
-                <select style={{...s.inp,width:"auto",fontSize:12,padding:"5px 8px",color:sc,background:C.card}} value={est.pipelineStatus||"Quote Sent"} onChange={e=>{e.stopPropagation();onStatus(est.id,e.target.value);}}>
-                  {STATUSES.map(st=><option key={st}>{st}</option>)}
-                </select>
-                <button style={{background:"none",border:`1px solid ${C.red}44`,color:C.red,padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:12,flexShrink:0}} onClick={e=>{e.stopPropagation();onDelete(est.id);}}>🗑</button>
-              </div>
-            );})}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── SHARED STYLES ────────────────────────────────────────────────────────────
-const s = {
-  navLnk: {background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:13,padding:"7px 9px"},
-  navBtn:  {background:"none",border:`1px solid ${C.border}`,color:C.muted,cursor:"pointer",fontSize:12,padding:"6px 13px",borderRadius:6},
-  cta:     {background:C.gold,color:"#080807",border:"none",padding:"14px 30px",fontSize:15,fontWeight:700,borderRadius:4,cursor:"pointer"},
-  ghost:   {background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer"},
-  lbl:     {display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"},
-  inp:     {width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},
-  submitBtn:{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"},
-  ghostBtn: {width:"100%",background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:14,fontSize:14,borderRadius:6,cursor:"pointer"},
-  lnkBtn:  {background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0},
-  card:    C.card,
-};
