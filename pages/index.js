@@ -349,21 +349,12 @@ const today  = () => new Date().toLocaleDateString("en-GB");
 const STEPS = ["Reading drawings…","Analysing dimensions…","Computing quantities…","Applying UK 2025 rates…","Compiling BOQ…","Generating report…"];
 
 const extractJSON = raw => {
-  // Strip markdown fences
-  let clean = raw;
-  clean = clean.replace(/^\s*```json\s*/i, "");
-  clean = clean.replace(/^\s*```\s*/i, "");
-  clean = clean.replace(/\s*```\s*$/i, "");
-  clean = clean.trim();
-  // Try direct parse
-  try { return JSON.parse(clean); } catch {}
-  // Find first { to last }
-  const s = clean.indexOf("{");
-  const e = clean.lastIndexOf("}");
+  let s = raw.indexOf("{");
+  let e = raw.lastIndexOf("}");
   if (s >= 0 && e > s) {
-    try { return JSON.parse(clean.slice(s, e+1)); } catch {}
+    try { return JSON.parse(raw.slice(s, e+1)); } catch {}
   }
-  throw new Error("Parse failed. Raw: " + raw.substring(0,200));
+  throw new Error("No JSON found in: " + raw.substring(0,100));
 };
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
