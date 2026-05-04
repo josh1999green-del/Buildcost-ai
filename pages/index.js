@@ -1001,6 +1001,7 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
                             <span style={{width:32,textAlign:"right",color:C.muted,fontSize:10,paddingTop:5,flexShrink:0}}>{item.unit}</span>
                             <input style={{width:60,background:"#111",border:`1px solid ${C.border}`,borderRadius:4,padding:"3px 5px",color:C.text,fontSize:12,textAlign:"right"}} type="number" step="0.01" value={item.unitCost} onChange={e=>editItem(cat.name,i,"unitCost",e.target.value)}/>
                             </>
+                          ):(
                                             <span style={{color:C.gold,fontWeight:700,fontSize:14}}>{fmt(cat.subtotal)}</span>
                   <span style={{color:C.dim,fontSize:11,marginLeft:6}}>{expandCat===cat.name?"▲":"▼"}</span>
                 </div>
