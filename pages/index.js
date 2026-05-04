@@ -13,8 +13,10 @@ OUTPUT RULES — CRITICAL:
 - Output ONLY a single raw JSON object. Start with { end with }
 - No markdown fences, no explanation, no text before or after
 - JSON must be complete and valid — never truncate it
-- Keep item descriptions under 80 characters
-- Up to 20 items per category — be thorough and detailed
+- Keep item descriptions under 60 characters
+- Maximum 8 categories, maximum 12 items per category
+- Be concise but accurate — group similar small items together
+- Total response must be under 4000 tokens
 
 JSON shape (replace all values, keep all keys):
 {"projectName":"","projectType":"","projectRef":"","summary":"","totalCost":0,"laborCost":0,"materialCost":0,"plantCost":0,"prelimsCost":0,"contingency":0,"contingencyPercent":10,"designFees":0,"vatAmount":0,"grandTotal":0,"timeline":"","confidence":"High","confidenceReason":"","notes":[],"exclusions":[],"inclusions":[],"categories":[{"name":"","icon":"","subtotal":0,"items":[{"ref":"","name":"","description":"","quantity":0,"unit":"","unitCost":0,"totalCost":0,"supplier":"","notes":""}]}]}
