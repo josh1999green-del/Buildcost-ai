@@ -970,7 +970,7 @@ function LoadingScr({step}){
 }
 
 // ─── RESULTS ──────────────────────────────────────────────────────────────────
-function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,onDash,editMode,setEditMode,onUpdate,onDelete,emailModal,setEmailModal,emailSent,setEmailSent,labourRates,setLabourRates,profitMargin,setProfitMargin}){
+function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,onDash,editMode,setEditMode,onUpdate,onDelete,emailModal,setEmailModal,emailSent,setEmailSent,labourRates,setLabourRates,profitMargin,setProfitMargin,exportExcel,companyName,companyEmail,companyPhone,companyAddress}){
   const [editRes,setEditRes]=useState(result);
   const [delConfirm,setDelConfirm]=useState(false);
   const [noteVal,setNoteVal]=useState(result?._internalNote||"");
