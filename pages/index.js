@@ -701,7 +701,7 @@ function Coll({icon,title,sub,open,setOpen,highlight,children}){
   );
 }
 
-function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType,setProjType,projDesc,setProjDesc,clientName,setClientName,clientEmail,setClientEmail,siteAddr,setSiteAddr,siteContact,setSiteContact,siteNotes,setSiteNotes,intNote,setIntNote,exclusions,setExclusions,overhead,setOverhead,region,setRegion,merchants,toggleMerchant,showSettings,setShowSettings,error,onSubmit,onDemo,onBack,fixings,setFixings,optionalExtras,setOptionalExtras}){
+function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType,setProjType,projDesc,setProjDesc,clientName,setClientName,clientEmail,setClientEmail,siteAddr,setSiteAddr,siteContact,setSiteContact,siteNotes,setSiteNotes,intNote,setIntNote,exclusions,setExclusions,overhead,setOverhead,region,setRegion,merchants,toggleMerchant,showSettings,setShowSettings,error,onSubmit,onDemo,onBack,fixings,setFixings,optionalExtras,setOptionalExtras,companyName,setCompanyName,companyEmail,setCompanyEmail,companyPhone,setCompanyPhone,companyAddress,setCompanyAddress}){
   const [openSite,setOpenSite]=useState(false);
   const [openExcl,setOpenExcl]=useState(false);
   const [openNote,setOpenNote]=useState(false);
@@ -879,6 +879,31 @@ function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType
 
           </div>
         </Coll>
+
+        {/* Company Branding */}
+        <div style={{background:"#0f0f0e",border:"1px solid #1e1e1c",borderRadius:10,padding:"16px",marginBottom:12}}>
+          <div style={{fontSize:12,fontWeight:600,color:"#bbb",marginBottom:12,letterSpacing:1}}>YOUR COMPANY DETAILS <span style={{color:"#555",fontWeight:400}}>(appears on printed estimate)</span></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+            <div>
+              <label style={{display:"block",fontSize:11,color:"#888",marginBottom:4}}>Company Name</label>
+              <input style={{width:"100%",background:"#111",border:"1px solid #1e1e1c",borderRadius:6,padding:"9px 12px",color:"#f0ede8",fontSize:13,boxSizing:"border-box"}} placeholder="Smith & Sons Construction" value={companyName} onChange={e=>setCompanyName(e.target.value)}/>
+            </div>
+            <div>
+              <label style={{display:"block",fontSize:11,color:"#888",marginBottom:4}}>Phone</label>
+              <input style={{width:"100%",background:"#111",border:"1px solid #1e1e1c",borderRadius:6,padding:"9px 12px",color:"#f0ede8",fontSize:13,boxSizing:"border-box"}} placeholder="07700 900000" value={companyPhone} onChange={e=>setCompanyPhone(e.target.value)}/>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div>
+              <label style={{display:"block",fontSize:11,color:"#888",marginBottom:4}}>Email</label>
+              <input style={{width:"100%",background:"#111",border:"1px solid #1e1e1c",borderRadius:6,padding:"9px 12px",color:"#f0ede8",fontSize:13,boxSizing:"border-box"}} placeholder="info@smithconstruction.co.uk" value={companyEmail} onChange={e=>setCompanyEmail(e.target.value)}/>
+            </div>
+            <div>
+              <label style={{display:"block",fontSize:11,color:"#888",marginBottom:4}}>Address</label>
+              <input style={{width:"100%",background:"#111",border:"1px solid #1e1e1c",borderRadius:6,padding:"9px 12px",color:"#f0ede8",fontSize:13,boxSizing:"border-box"}} placeholder="123 High Street, Manchester" value={companyAddress} onChange={e=>setCompanyAddress(e.target.value)}/>
+            </div>
+          </div>
+        </div>
 
         {/* Optional Extras */}
         <div style={{background:"#0f0f0e",border:"1px solid #1e1e1c",borderRadius:10,padding:"16px",marginBottom:12}}>
