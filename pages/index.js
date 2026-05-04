@@ -626,7 +626,7 @@ function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType
                 </div>
               ))}
             </div>
-            <button style={{...{background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0},marginTop:10}} onClick={()=>fileRef.current.click()}>+ Add more files</button>
+            <button style={{background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0},marginTop:10}} onClick={()=>fileRef.current.click()}>+ Add more files</button>
           </div>
         )}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}} className="g2">
@@ -639,14 +639,14 @@ function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType
           </select>
         </div>
         <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Project Description</label>
-          <textarea style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical",lineHeight:1.7,minHeight:100}} rows={4} value={projDesc} onChange={e=>setProjDesc(e.target.value)} placeholder="e.g. Single storey rear extension, 4m x 5m, brick and block cavity wall, flat roof, bi-fold doors, UFH throughout…"/>
+          <textarea style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical",lineHeight:1.7,minHeight:100}} rows={4} value={projDesc} onChange={e=>setProjDesc(e.target.value)} placeholder="e.g. Single storey rear extension, 4m x 5m, brick and block cavity wall, flat roof, bi-fold doors, UFH throughout…"/>
         </div>
         <Coll icon="📍" title="Site Details" sub="Address, contact & access notes" open={openSite} setOpen={setOpenSite}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}} className="g2">
             <div><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Site Address</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} placeholder="12 Elm St, Manchester" value={siteAddr} onChange={e=>setSiteAddr(e.target.value)}/></div>
             <div><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Site Contact</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} placeholder="Name & phone" value={siteContact} onChange={e=>setSiteContact(e.target.value)}/></div>
           </div>
-          <div><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Access Notes</label><textarea style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={2} value={siteNotes} onChange={e=>setSiteNotes(e.target.value)}/></div>
+          <div><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Access Notes</label><textarea style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={2} value={siteNotes} onChange={e=>setSiteNotes(e.target.value)}/></div>
         </Coll>
         {/* Region & Merchants */}
         <Coll icon="📍" title={`Region & Pricing Area — ${REGIONS.find(r=>r.id===region)?.label||"North West"}`} sub="Adjusts all rates for your local market" open={openReg} setOpen={setOpenReg} highlight>
@@ -683,10 +683,10 @@ function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType
         </Coll>
 
         <Coll icon="🚫" title="Items to Exclude" sub="Remove anything the customer has priced elsewhere" open={openExcl} setOpen={setOpenExcl}>
-          <textarea style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={3} value={exclusions} onChange={e=>setExclusions(e.target.value)} placeholder={"e.g.\n- Windows and doors (customer has separate quote)\n- Kitchen units and appliances"}/>
+          <textarea style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={3} value={exclusions} onChange={e=>setExclusions(e.target.value)} placeholder={"e.g.\n- Windows and doors (customer has separate quote)\n- Kitchen units and appliances"}/>
         </Coll>
         <Coll icon="💬" title="Internal Notes" sub="Private notes — never shown to client" open={openNote} setOpen={setOpenNote}>
-          <textarea style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={3} value={intNote} onChange={e=>setIntNote(e.target.value)} placeholder="e.g. Client flexible on budget. Check groundworks depth."/>
+          <textarea style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={3} value={intNote} onChange={e=>setIntNote(e.target.value)} placeholder="e.g. Client flexible on budget. Check groundworks depth."/>
         </Coll>
         <Coll icon="🔒" title={`Office & Overhead Markup — ${overhead}%`} sub="Baked silently into all costs, never visible to client" open={openOH} setOpen={setOpenOH} highlight>
           <p style={{fontSize:13,color:C.muted,lineHeight:1.7,marginBottom:14}}>Covers office running costs, estimating time and profit margin. <strong style={{color:C.text}}>Baked into every line item</strong> — client never sees this figure.</p>
@@ -880,8 +880,8 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
         </div>
         <div style={{background:"#0f0e09",border:`1px solid ${C.gold}28`,borderRadius:10,padding:"14px 16px",marginBottom:20}} className="no-print">
           <div style={{fontSize:10,color:C.gold,letterSpacing:2,marginBottom:8,fontFamily:"monospace"}}>🔒 INTERNAL NOTES — NOT VISIBLE TO CLIENT</div>
-          <textarea style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},marginBottom:8,background:"#0a0908",resize:"vertical"}} rows={2} value={noteVal} onChange={e=>setNoteVal(e.target.value)} placeholder="Add private notes…"/>
-          <button style={{...{background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0},...(noteSaved?{color:C.green}:{})}} onClick={saveNote}>{noteSaved?"✓ Saved":"Save note"}</button>
+          <textarea style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},marginBottom:8,background:"#0a0908",resize:"vertical"}} rows={2} value={noteVal} onChange={e=>setNoteVal(e.target.value)} placeholder="Add private notes…"/>
+          <button style={{background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0},...(noteSaved?{color:C.green}:{})}} onClick={saveNote}>{noteSaved?"✓ Saved":"Save note"}</button>
         </div>
         {/* ── PROFIT MARGIN PANEL ── private, no-print ─────────────────── */}
         <div style={{background:"#0a0f0a",border:`1px solid ${C.green}30`,borderRadius:10,padding:"14px 16px",marginBottom:12}} className="no-print">
@@ -1029,7 +1029,7 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
         {activeTab==="notes"&&<ListTab items={r.notes} title="Estimator Notes" col={C.gold} sym="•"/>}
         <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:24}} className="no-print">
           <button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"}} onClick={()=>window.print()}>🖨️ Print / Save as PDF</button>
-          <div style={{display:"flex",gap:10}}><button style={{...{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer"}Btn,flex:1}} onClick={onNew}>+ New Estimate</button><button style={{...{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer"}Btn,flex:1}} onClick={onDash}>📊 Dashboard</button></div>
+          <div style={{display:"flex",gap:10}}><button style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer",flex:1}} onClick={onNew}>+ New Estimate</button><button style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer",flex:1}} onClick={onDash}>📊 Dashboard</button></div>
         </div>
       </div>
       {emailModal&&(
@@ -1042,8 +1042,8 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
               <>
                 <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>To</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} defaultValue={r._clientEmail} placeholder="client@email.com"/></div>
                 <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Subject</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} defaultValue={`Estimate: ${r.projectName} — ${fmt(r.grandTotal||r.totalCost)}`}/></div>
-                <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Message</label><textarea style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={5} defaultValue={`Dear ${r._clientName||"Client"},\n\nPlease find your construction estimate for ${r.projectName}.\n\nTotal: ${fmt(r.grandTotal||r.totalCost)} inc. VAT\nTimeline: ${r.timeline}\n\nKind regards,\nBuildCostAI`}/></div>
-                <div style={{display:"flex",gap:10}}><button style={{...{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer"}Btn,flex:1}} onClick={()=>setEmailModal(false)}>Cancel</button><button style={{...{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"},flex:2}} onClick={()=>setEmailSent(true)}>Send Estimate 📧</button></div>
+                <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Message</label><textarea style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={5} defaultValue={`Dear ${r._clientName||"Client"},\n\nPlease find your construction estimate for ${r.projectName}.\n\nTotal: ${fmt(r.grandTotal||r.totalCost)} inc. VAT\nTimeline: ${r.timeline}\n\nKind regards,\nBuildCostAI`}/></div>
+                <div style={{display:"flex",gap:10}}><button style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer",flex:1}} onClick={()=>setEmailModal(false)}>Cancel</button><button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"},flex:2}} onClick={()=>setEmailSent(true)}>Send Estimate 📧</button></div>
               </>
             )}
           </div>
@@ -1055,7 +1055,7 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
             <div style={{fontSize:38,marginBottom:10}}>🗑</div>
             <h3 style={{fontSize:17,fontWeight:700,marginBottom:8}}>Delete this estimate?</h3>
             <p style={{color:C.muted,fontSize:13,marginBottom:22}}>This cannot be undone.</p>
-            <div style={{display:"flex",gap:10}}><button style={{...{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer"}Btn,flex:1}} onClick={()=>setDelConfirm(false)}>Cancel</button><button style={{...{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"},flex:1,background:C.red}} onClick={()=>{setDelConfirm(false);onDelete();}}>Delete</button></div>
+            <div style={{display:"flex",gap:10}}><button style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer",flex:1}} onClick={()=>setDelConfirm(false)}>Cancel</button><button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"},flex:1,background:C.red}} onClick={()=>{setDelConfirm(false);onDelete();}}>Delete</button></div>
           </div>
         </div>
       )}
@@ -1091,5 +1091,5 @@ function DashScr({estimates,onNew,onView,onBack,onStatus,onDelete}){
         <div style={{display:"flex",gap:7,marginBottom:16,overflowX:"auto",paddingBottom:4}}>
           {["All",...STATUSES].map(st=>{const cnt=st==="All"?estimates.length:estimates.filter(e=>e.pipelineStatus===st).length;const col=STATUS_COL[st]||C.gold;return(<button key={st} style={{background:filter===st?(st==="All"?C.gold:col):"transparent",color:filter===st?"#080807":C.muted,border:`1px solid ${filter===st?(st==="All"?C.gold:col):C.border}`,padding:"7px 14px",borderRadius:20,cursor:"pointer",fontSize:12,whiteSpace:"nowrap"}} onClick={()=>setFilter(st)}>{st} ({cnt})</button>);})}
         </div>
-        <input style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},marginBottom:18}} placeholder="🔍 Search project or client…" value={search} onChange={e=>setSearch(e.target.value)}/>
+        <input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},marginBottom:18}} placeholder="🔍 Search project or client…" value={search} onChange={e=>setSearch(e.target.value)}/>
         {estimates.length===0?(
