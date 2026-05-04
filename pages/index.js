@@ -104,6 +104,9 @@ ALWAYS include a "Preliminaries & Site Establishment" category with:
 - PPE and site safety equipment
 - Site hoarding/security fencing
 - Insurance and preliminaries (1-2% of contract value)
+- Diesel/fuel for plant and machinery (per week based on usage)
+- Generator hire and fuel if mains power not available
+- Van/vehicle fuel allowance for site visits and material runs
 
 Price every single item. Leave nothing out. A proper BOQ prices every nail and every tube of sealant.`;
 
