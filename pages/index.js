@@ -1008,7 +1008,7 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
                             <span style={{width:64,textAlign:"right",flexShrink:0}}>{fmt(item.unitCost)}</span>
                           </>
                         )}
-                        {fmt(item.totalCost)}</span>
+                        <span style={{width:64,textAlign:"right",fontWeight:700,flexShrink:0}}>{fmt(item.totalCost)}</span>
                       </div>
                     ))}
                     <div style={{display:"flex",justifyContent:"space-between",padding:"12px 14px",borderTop:`1px solid ${C.border}`,fontWeight:700,color:C.gold,fontSize:14}}><span>Subtotal — {cat.name}</span><span>{fmt(cat.subtotal)}</span></div>
