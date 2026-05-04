@@ -347,14 +347,19 @@ const today  = () => new Date().toLocaleDateString("en-GB");
 const STEPS = ["Reading drawings…","Analysing dimensions…","Computing quantities…","Applying UK 2025 rates…","Compiling BOQ…","Generating report…"];
 
 const extractJSON = raw => {
-  const clean = raw.replace(/```json/gi,"").replace(/```/g,"").trim();
+  // Strip markdown fences
+  let clean = raw;
+  clean = clean.replace(/^\s*```json\s*/i, "");
+  clean = clean.replace(/^\s*```\s*/i, "");
+  clean = clean.replace(/\s*```\s*$/i, "");
+  clean = clean.trim();
+  // Try direct parse
   try { return JSON.parse(clean); } catch {}
-  const s=clean.indexOf("{"), e=clean.lastIndexOf("}");
-  if(s>=0&&e>s){ try{return JSON.parse(clean.slice(s,e+1));}catch{} }
-  if(s>=0){
-    let p=clean.slice(s).replace(/,\s*"[^"]{0,60}":\s*[^,}\]]*$/,"");
-    let ob=0,ab=0; for(const c of p){if(c==="{")ob++;else if(c==="}")ob--;else if(c==="[")ab++;else if(c==="]")ab--;}
-    try{return JSON.parse(p+"]".repeat(Math.max(0,ab))+"}".repeat(Math.max(0,ob)));}catch{}
+  // Find first { to last }
+  const s = clean.indexOf("{");
+  const e = clean.lastIndexOf("}");
+  if (s >= 0 && e > s) {
+    try { return JSON.parse(clean.slice(s, e+1)); } catch {}
   }
   throw new Error("Parse failed. Raw: " + raw.substring(0,200));
 };
