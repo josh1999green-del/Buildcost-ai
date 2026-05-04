@@ -685,7 +685,7 @@ function Coll({icon,title,sub,open,setOpen,highlight,children}){
   );
 }
 
-function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType,setProjType,projDesc,setProjDesc,clientName,setClientName,clientEmail,setClientEmail,siteAddr,setSiteAddr,siteContact,setSiteContact,siteNotes,setSiteNotes,intNote,setIntNote,exclusions,setExclusions,overhead,setOverhead,region,setRegion,merchants,toggleMerchant,showSettings,setShowSettings,error,onSubmit,onDemo,onBack,fixings,setFixings}){
+function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType,setProjType,projDesc,setProjDesc,clientName,setClientName,clientEmail,setClientEmail,siteAddr,setSiteAddr,siteContact,setSiteContact,siteNotes,setSiteNotes,intNote,setIntNote,exclusions,setExclusions,overhead,setOverhead,region,setRegion,merchants,toggleMerchant,showSettings,setShowSettings,error,onSubmit,onDemo,onBack,fixings,setFixings,optionalExtras,setOptionalExtras}){
   const [openSite,setOpenSite]=useState(false);
   const [openExcl,setOpenExcl]=useState(false);
   const [openNote,setOpenNote]=useState(false);
@@ -863,6 +863,29 @@ function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType
 
           </div>
         </Coll>
+
+        {/* Optional Extras */}
+        <div style={{background:"#0f0f0e",border:"1px solid #1e1e1c",borderRadius:10,padding:"16px",marginBottom:12}}>
+          <div style={{fontSize:12,fontWeight:600,color:"#bbb",marginBottom:12,letterSpacing:1}}>OPTIONAL EXTRAS</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            {[
+              ["asbestos","🔬 Asbestos Survey"],
+              ["batSurvey","🦇 Bat/Ecology Survey"],
+              ["watchingBrief","⛏️ Archaeological Watching Brief"],
+              ["trafficManagement","🚦 Traffic Management"],
+              ["cdmCoordinator","📋 CDM Coordinator"],
+              ["partyWall","🏠 Party Wall Surveyor"],
+            ].map(([key,label])=>(
+              <div key={key} onClick={()=>setOptionalExtras(p=>({...p,[key]:!p[key]}))}
+                style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:8,cursor:"pointer",background:optionalExtras[key]?"#1a1a0a":"#111",border:"1px solid "+(optionalExtras[key]?"#d4a853":"#1e1e1c")}}>
+                <div style={{width:18,height:18,borderRadius:4,border:"2px solid "+(optionalExtras[key]?"#d4a853":"#444"),background:optionalExtras[key]?"#d4a853":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  {optionalExtras[key]&&<span style={{color:"#080807",fontSize:12,fontWeight:700}}>✓</span>}
+                </div>
+                <span style={{fontSize:13,color:optionalExtras[key]?"#d4a853":"#888"}}>{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {error&&<div style={{background:"#2a1212",border:"1px solid #5a2020",borderRadius:8,padding:"12px 16px",marginBottom:16,fontSize:13,color:"#ff8080"}}>⚠️ {error}</div>}
 
