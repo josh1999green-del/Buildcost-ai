@@ -547,23 +547,20 @@ Price all fixings and fittings according to these preferences. Include every ind
     rows.push([]);
     rows.push(["AI estimates are indicative. Always verify with a qualified QS for tender purposes."]);
 
-    // Convert to CSV (Excel-compatible)
-    const csv = rows.map(row =>
-      row.map(cell => {
-        const s = String(cell ?? "");
-        return s.includes(",") || s.includes('"') || s.includes("\n")
-          ? '"' + s.replace(/"/g, '""') + '"'
-          : s;
-      }).join(",")
-    ).join("
-");
-
-    const BOM = "﻿";
-    const blob = new Blob([BOM + csv], { type: "text/csv;charset=utf-8;" });
+    // Convert to CSV
+    const esc = v => {
+      const s = String(v == null ? "" : v);
+      if (s.indexOf(",") >= 0 || s.indexOf('"') >= 0) {
+        return '"' + s.split('"').join('""') + '"';
+      }
+      return s;
+    };
+    const csv = rows.map(r => r.map(esc).join(",")).join("\r\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${(est.projectName || "estimate").replace(/[^a-z0-9]/gi, "-")}-BOQ.csv`;
+    a.download = (est.projectName || "estimate").replace(/[^a-z0-9]/gi, "-") + "-BOQ.csv";
     a.click();
     URL.revokeObjectURL(url);
   };
