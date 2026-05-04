@@ -818,6 +818,8 @@ function LoadingScr({step}){
         ))}
       </div>
     </div>
+  );
+}
 
 // ─── RESULTS ──────────────────────────────────────────────────────────────────
 function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,onDash,editMode,setEditMode,onUpdate,onDelete,emailModal,setEmailModal,emailSent,setEmailSent,labourRates,setLabourRates,profitMargin,setProfitMargin}){
