@@ -1003,7 +1003,10 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
                             </>
                           ):(
                                             <span style={{color:C.gold,fontWeight:700,fontSize:14}}>{fmt(cat.subtotal)}</span>
+                          <>
                   <span style={{color:C.dim,fontSize:11,marginLeft:6}}>{expandCat===cat.name?"▲":"▼"}</span>
+                          </>
+                          )
                 </div>
                 {expandCat===cat.name&&(
                   <div style={{background:"#0c0c0b",overflowX:"auto"}}>
