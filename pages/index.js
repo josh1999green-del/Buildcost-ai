@@ -1007,39 +1007,8 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
                             <span style={{width:32,textAlign:"right",color:C.muted,fontSize:10,flexShrink:0,paddingTop:2}}>{item.unit}</span>
                             <span style={{width:64,textAlign:"right",flexShrink:0}}>{fmt(item.unitCost)}</span>
                           </>
-                        )}}</span>
-                          <>
-                  <span style={{color:C.dim,fontSize:11,marginLeft:6}}>{expandCat===cat.name?"▲":"▼"}</span>
-                          </>
-                          )
-                </div>
-                {expandCat===cat.name&&(
-                  <div style={{background:"#0c0c0b",overflowX:"auto"}}>
-                    <div style={{display:"flex",padding:"8px 14px",fontSize:10,color:C.dim,letterSpacing:1,borderBottom:`1px solid #1a1a18`,fontFamily:"monospace",gap:6,minWidth:520}}>
-                      <span style={{width:32}}>Ref</span><span style={{flex:3}}>Item</span><span style={{width:52,textAlign:"right"}}>Qty</span><span style={{width:32,textAlign:"right"}}>Unit</span><span style={{width:64,textAlign:"right"}}>Rate</span><span style={{width:64,textAlign:"right"}}>Total</span>
-                    </div>
-                    {cat.items?.map((item,i)=>(
-                      <div key={i} style={{display:"flex",padding:"11px 14px",fontSize:13,alignItems:"flex-start",gap:6,borderBottom:`1px solid #131312`,background:i%2?"#0a0a09":"transparent",minWidth:520}}>
-                        <span style={{width:32,color:C.dim,fontSize:11,flexShrink:0,paddingTop:2}}>{item.ref}</span>
-                        <div style={{flex:3,minWidth:0}}>
-                          <div style={{fontWeight:600,marginBottom:2}}>{item.name}</div>
-                          <div style={{fontSize:11,color:C.muted,lineHeight:1.5}}>{item.description}</div>
-                          {item.supplier&&<div style={{fontSize:10,color:C.dim}}>📦 {item.supplier}</div>}
-                        </div>
-                        {editMode?(
-                          <>
-                            <input style={{width:50,background:"#111",border:`1px solid ${C.border}`,borderRadius:4,padding:"3px 5px",color:C.text,fontSize:12,textAlign:"right"}} type="number" value={item.quantity} onChange={e=>editItem(cat.name,i,"quantity",e.target.value)}/>
-                            <span style={{width:32,textAlign:"right",color:C.muted,fontSize:10,paddingTop:5,flexShrink:0}}>{item.unit}</span>
-                            <input style={{width:60,background:"#111",border:`1px solid ${C.border}`,borderRadius:4,padding:"3px 5px",color:C.text,fontSize:12,textAlign:"right"}} type="number" step="0.01" value={item.unitCost} onChange={e=>editItem(cat.name,i,"unitCost",e.target.value)}/>
-                          </>
-                        ):(
-                          <>
-                            <span style={{width:52,textAlign:"right",flexShrink:0}}>{item.quantity}</span>
-                            <span style={{width:32,textAlign:"right",color:C.muted,fontSize:10,flexShrink:0,paddingTop:2}}>{item.unit}</span>
-                            <span style={{width:64,textAlign:"right",flexShrink:0}}>{fmtDec(item.unitCost)}</span>
-                          </>
                         )}
-                        <span style={{width:64,textAlign:"right",fontWeight:700,flexShrink:0}}>{fmt(item.totalCost)}</span>
+                        {fmt(item.totalCost)}</span>
                       </div>
                     ))}
                     <div style={{display:"flex",justifyContent:"space-between",padding:"12px 14px",borderTop:`1px solid ${C.border}`,fontWeight:700,color:C.gold,fontSize:14}}><span>Subtotal — {cat.name}</span><span>{fmt(cat.subtotal)}</span></div>
