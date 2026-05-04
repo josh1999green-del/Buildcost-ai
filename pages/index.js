@@ -104,9 +104,10 @@ ALWAYS include a "Preliminaries & Site Establishment" category with:
 - PPE and site safety equipment
 - Site hoarding/security fencing
 - Insurance and preliminaries (1-2% of contract value)
-- Diesel/fuel for plant and machinery (per week based on usage)
-- Generator hire and fuel if mains power not available
-- Van/vehicle fuel allowance for site visits and material runs
+- Diesel for plant and machinery - concrete mixer, dumper, excavator (price per week x duration)
+- Diesel for work vans travelling to and from site daily - price per van per week x number of weeks x number of vans on site
+- Material collection runs - van fuel for picking up materials from merchants (price per week)
+- Generator hire and diesel fuel if mains power not available on site
 
 Price every single item. Leave nothing out. A proper BOQ prices every nail and every tube of sealant.`;
 
