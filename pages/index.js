@@ -347,7 +347,7 @@ const today  = () => new Date().toLocaleDateString("en-GB");
 const STEPS = ["Reading drawings…","Analysing dimensions…","Computing quantities…","Applying UK 2025 rates…","Compiling BOQ…","Generating report…"];
 
 const extractJSON = raw => {
-  const clean = raw.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+  const clean = raw.replace(/```json/gi,"").replace(/```/g,"").trim();
   try { return JSON.parse(clean); } catch {}
   const s=clean.indexOf("{"), e=clean.lastIndexOf("}");
   if(s>=0&&e>s){ try{return JSON.parse(clean.slice(s,e+1));}catch{} }
