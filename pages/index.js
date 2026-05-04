@@ -315,18 +315,6 @@ const MERCHANTS = [
   "Bradfords", "National Timber Group", "Parker Building Supplies", "Other",
 ];
 
-const REGIONS = [
-  { id:"london",     label:"London & SE",         multiplier:1.25 },
-  { id:"southeast",  label:"South East",           multiplier:1.12 },
-  { id:"southwest",  label:"South West",           multiplier:1.05 },
-  { id:"midlands",   label:"Midlands",             multiplier:1.00 },
-  { id:"northwest",  label:"North West",           multiplier:0.97 },
-  { id:"northeast",  label:"North East",           multiplier:0.93 },
-  { id:"yorkshire",  label:"Yorkshire & Humber",   multiplier:0.95 },
-  { id:"wales",      label:"Wales",                multiplier:0.92 },
-  { id:"scotland",   label:"Scotland",             multiplier:0.98 },
-  { id:"nireland",   label:"Northern Ireland",     multiplier:0.90 },
-];
 
 
 
@@ -587,6 +575,7 @@ function MockCard(){
     </div>
   );
 }
+
 // ─── UPLOAD ───────────────────────────────────────────────────────────────────
 function Coll({icon,title,sub,open,setOpen,highlight,children}){
   return(
@@ -637,7 +626,7 @@ function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType
                 </div>
               ))}
             </div>
-            <button style={{background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0},marginTop:10}} onClick={()=>fileRef.current.click()}>+ Add more files</button>
+            <button style={{...{background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0},marginTop:10}} onClick={()=>fileRef.current.click()}>+ Add more files</button>
           </div>
         )}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}} className="g2">
@@ -650,14 +639,14 @@ function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType
           </select>
         </div>
         <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Project Description</label>
-          <textarea style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical",lineHeight:1.7,minHeight:100}} rows={4} value={projDesc} onChange={e=>setProjDesc(e.target.value)} placeholder="e.g. Single storey rear extension, 4m x 5m, brick and block cavity wall, flat roof, bi-fold doors, UFH throughout…"/>
+          <textarea style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical",lineHeight:1.7,minHeight:100}} rows={4} value={projDesc} onChange={e=>setProjDesc(e.target.value)} placeholder="e.g. Single storey rear extension, 4m x 5m, brick and block cavity wall, flat roof, bi-fold doors, UFH throughout…"/>
         </div>
         <Coll icon="📍" title="Site Details" sub="Address, contact & access notes" open={openSite} setOpen={setOpenSite}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}} className="g2">
             <div><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Site Address</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} placeholder="12 Elm St, Manchester" value={siteAddr} onChange={e=>setSiteAddr(e.target.value)}/></div>
             <div><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Site Contact</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} placeholder="Name & phone" value={siteContact} onChange={e=>setSiteContact(e.target.value)}/></div>
           </div>
-          <div><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Access Notes</label><textarea style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={2} value={siteNotes} onChange={e=>setSiteNotes(e.target.value)}/></div>
+          <div><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Access Notes</label><textarea style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={2} value={siteNotes} onChange={e=>setSiteNotes(e.target.value)}/></div>
         </Coll>
         {/* Region & Merchants */}
         <Coll icon="📍" title={`Region & Pricing Area — ${REGIONS.find(r=>r.id===region)?.label||"North West"}`} sub="Adjusts all rates for your local market" open={openReg} setOpen={setOpenReg} highlight>
@@ -694,10 +683,10 @@ function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType
         </Coll>
 
         <Coll icon="🚫" title="Items to Exclude" sub="Remove anything the customer has priced elsewhere" open={openExcl} setOpen={setOpenExcl}>
-          <textarea style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={3} value={exclusions} onChange={e=>setExclusions(e.target.value)} placeholder={"e.g.\n- Windows and doors (customer has separate quote)\n- Kitchen units and appliances"}/>
+          <textarea style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={3} value={exclusions} onChange={e=>setExclusions(e.target.value)} placeholder={"e.g.\n- Windows and doors (customer has separate quote)\n- Kitchen units and appliances"}/>
         </Coll>
         <Coll icon="💬" title="Internal Notes" sub="Private notes — never shown to client" open={openNote} setOpen={setOpenNote}>
-          <textarea style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={3} value={intNote} onChange={e=>setIntNote(e.target.value)} placeholder="e.g. Client flexible on budget. Check groundworks depth."/>
+          <textarea style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={3} value={intNote} onChange={e=>setIntNote(e.target.value)} placeholder="e.g. Client flexible on budget. Check groundworks depth."/>
         </Coll>
         <Coll icon="🔒" title={`Office & Overhead Markup — ${overhead}%`} sub="Baked silently into all costs, never visible to client" open={openOH} setOpen={setOpenOH} highlight>
           <p style={{fontSize:13,color:C.muted,lineHeight:1.7,marginBottom:14}}>Covers office running costs, estimating time and profit margin. <strong style={{color:C.text}}>Baked into every line item</strong> — client never sees this figure.</p>
@@ -891,8 +880,8 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
         </div>
         <div style={{background:"#0f0e09",border:`1px solid ${C.gold}28`,borderRadius:10,padding:"14px 16px",marginBottom:20}} className="no-print">
           <div style={{fontSize:10,color:C.gold,letterSpacing:2,marginBottom:8,fontFamily:"monospace"}}>🔒 INTERNAL NOTES — NOT VISIBLE TO CLIENT</div>
-          <textarea style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},marginBottom:8,background:"#0a0908",resize:"vertical"}} rows={2} value={noteVal} onChange={e=>setNoteVal(e.target.value)} placeholder="Add private notes…"/>
-          <button style={{background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0},...(noteSaved?{color:C.green}:{})}} onClick={saveNote}>{noteSaved?"✓ Saved":"Save note"}</button>
+          <textarea style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},marginBottom:8,background:"#0a0908",resize:"vertical"}} rows={2} value={noteVal} onChange={e=>setNoteVal(e.target.value)} placeholder="Add private notes…"/>
+          <button style={{...{background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0},...(noteSaved?{color:C.green}:{})}} onClick={saveNote}>{noteSaved?"✓ Saved":"Save note"}</button>
         </div>
         {/* ── PROFIT MARGIN PANEL ── private, no-print ─────────────────── */}
         <div style={{background:"#0a0f0a",border:`1px solid ${C.green}30`,borderRadius:10,padding:"14px 16px",marginBottom:12}} className="no-print">
@@ -1011,6 +1000,27 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
                             <input style={{width:50,background:"#111",border:`1px solid ${C.border}`,borderRadius:4,padding:"3px 5px",color:C.text,fontSize:12,textAlign:"right"}} type="number" value={item.quantity} onChange={e=>editItem(cat.name,i,"quantity",e.target.value)}/>
                             <span style={{width:32,textAlign:"right",color:C.muted,fontSize:10,paddingTop:5,flexShrink:0}}>{item.unit}</span>
                             <input style={{width:60,background:"#111",border:`1px solid ${C.border}`,borderRadius:4,padding:"3px 5px",color:C.text,fontSize:12,textAlign:"right"}} type="number" step="0.01" value={item.unitCost} onChange={e=>editItem(cat.name,i,"unitCost",e.target.value)}/>
+                                            <span style={{color:C.gold,fontWeight:700,fontSize:14}}>{fmt(cat.subtotal)}</span>
+                  <span style={{color:C.dim,fontSize:11,marginLeft:6}}>{expandCat===cat.name?"▲":"▼"}</span>
+                </div>
+                {expandCat===cat.name&&(
+                  <div style={{background:"#0c0c0b",overflowX:"auto"}}>
+                    <div style={{display:"flex",padding:"8px 14px",fontSize:10,color:C.dim,letterSpacing:1,borderBottom:`1px solid #1a1a18`,fontFamily:"monospace",gap:6,minWidth:520}}>
+                      <span style={{width:32}}>Ref</span><span style={{flex:3}}>Item</span><span style={{width:52,textAlign:"right"}}>Qty</span><span style={{width:32,textAlign:"right"}}>Unit</span><span style={{width:64,textAlign:"right"}}>Rate</span><span style={{width:64,textAlign:"right"}}>Total</span>
+                    </div>
+                    {cat.items?.map((item,i)=>(
+                      <div key={i} style={{display:"flex",padding:"11px 14px",fontSize:13,alignItems:"flex-start",gap:6,borderBottom:`1px solid #131312`,background:i%2?"#0a0a09":"transparent",minWidth:520}}>
+                        <span style={{width:32,color:C.dim,fontSize:11,flexShrink:0,paddingTop:2}}>{item.ref}</span>
+                        <div style={{flex:3,minWidth:0}}>
+                          <div style={{fontWeight:600,marginBottom:2}}>{item.name}</div>
+                          <div style={{fontSize:11,color:C.muted,lineHeight:1.5}}>{item.description}</div>
+                          {item.supplier&&<div style={{fontSize:10,color:C.dim}}>📦 {item.supplier}</div>}
+                        </div>
+                        {editMode?(
+                          <>
+                            <input style={{width:50,background:"#111",border:`1px solid ${C.border}`,borderRadius:4,padding:"3px 5px",color:C.text,fontSize:12,textAlign:"right"}} type="number" value={item.quantity} onChange={e=>editItem(cat.name,i,"quantity",e.target.value)}/>
+                            <span style={{width:32,textAlign:"right",color:C.muted,fontSize:10,paddingTop:5,flexShrink:0}}>{item.unit}</span>
+                            <input style={{width:60,background:"#111",border:`1px solid ${C.border}`,borderRadius:4,padding:"3px 5px",color:C.text,fontSize:12,textAlign:"right"}} type="number" step="0.01" value={item.unitCost} onChange={e=>editItem(cat.name,i,"unitCost",e.target.value)}/>
                           </>
                         ):(
                           <>
@@ -1040,7 +1050,7 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
         {activeTab==="notes"&&<ListTab items={r.notes} title="Estimator Notes" col={C.gold} sym="•"/>}
         <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:24}} className="no-print">
           <button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"}} onClick={()=>window.print()}>🖨️ Print / Save as PDF</button>
-          <div style={{display:"flex",gap:10}}><button style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer",flex:1}} onClick={onNew}>+ New Estimate</button><button style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer",flex:1}} onClick={onDash}>📊 Dashboard</button></div>
+          <div style={{display:"flex",gap:10}}><button style={{...{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer"}Btn,flex:1}} onClick={onNew}>+ New Estimate</button><button style={{...{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer"}Btn,flex:1}} onClick={onDash}>📊 Dashboard</button></div>
         </div>
       </div>
       {emailModal&&(
@@ -1053,8 +1063,8 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
               <>
                 <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>To</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} defaultValue={r._clientEmail} placeholder="client@email.com"/></div>
                 <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Subject</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} defaultValue={`Estimate: ${r.projectName} — ${fmt(r.grandTotal||r.totalCost)}`}/></div>
-                <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Message</label><textarea style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={5} defaultValue={`Dear ${r._clientName||"Client"},\n\nPlease find your construction estimate for ${r.projectName}.\n\nTotal: ${fmt(r.grandTotal||r.totalCost)} inc. VAT\nTimeline: ${r.timeline}\n\nKind regards,\nBuildCostAI`}/></div>
-                <div style={{display:"flex",gap:10}}><button style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer",flex:1}} onClick={()=>setEmailModal(false)}>Cancel</button><button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"},flex:2}} onClick={()=>setEmailSent(true)}>Send Estimate 📧</button></div>
+                <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Message</label><textarea style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},resize:"vertical"}} rows={5} defaultValue={`Dear ${r._clientName||"Client"},\n\nPlease find your construction estimate for ${r.projectName}.\n\nTotal: ${fmt(r.grandTotal||r.totalCost)} inc. VAT\nTimeline: ${r.timeline}\n\nKind regards,\nBuildCostAI`}/></div>
+                <div style={{display:"flex",gap:10}}><button style={{...{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer"}Btn,flex:1}} onClick={()=>setEmailModal(false)}>Cancel</button><button style={{...{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"},flex:2}} onClick={()=>setEmailSent(true)}>Send Estimate 📧</button></div>
               </>
             )}
           </div>
@@ -1066,7 +1076,7 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
             <div style={{fontSize:38,marginBottom:10}}>🗑</div>
             <h3 style={{fontSize:17,fontWeight:700,marginBottom:8}}>Delete this estimate?</h3>
             <p style={{color:C.muted,fontSize:13,marginBottom:22}}>This cannot be undone.</p>
-            <div style={{display:"flex",gap:10}}><button style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer",flex:1}} onClick={()=>setDelConfirm(false)}>Cancel</button><button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"},flex:1,background:C.red}} onClick={()=>{setDelConfirm(false);onDelete();}}>Delete</button></div>
+            <div style={{display:"flex",gap:10}}><button style={{...{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer"}Btn,flex:1}} onClick={()=>setDelConfirm(false)}>Cancel</button><button style={{...{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"},flex:1,background:C.red}} onClick={()=>{setDelConfirm(false);onDelete();}}>Delete</button></div>
           </div>
         </div>
       )}
@@ -1102,24 +1112,5 @@ function DashScr({estimates,onNew,onView,onBack,onStatus,onDelete}){
         <div style={{display:"flex",gap:7,marginBottom:16,overflowX:"auto",paddingBottom:4}}>
           {["All",...STATUSES].map(st=>{const cnt=st==="All"?estimates.length:estimates.filter(e=>e.pipelineStatus===st).length;const col=STATUS_COL[st]||C.gold;return(<button key={st} style={{background:filter===st?(st==="All"?C.gold:col):"transparent",color:filter===st?"#080807":C.muted,border:`1px solid ${filter===st?(st==="All"?C.gold:col):C.border}`,padding:"7px 14px",borderRadius:20,cursor:"pointer",fontSize:12,whiteSpace:"nowrap"}} onClick={()=>setFilter(st)}>{st} ({cnt})</button>);})}
         </div>
-        <input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},marginBottom:18}} placeholder="🔍 Search project or client…" value={search} onChange={e=>setSearch(e.target.value)}/>
+        <input style={{...{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},marginBottom:18}} placeholder="🔍 Search project or client…" value={search} onChange={e=>setSearch(e.target.value)}/>
         {estimates.length===0?(
-          <div style={{textAlign:"center",padding:"60px 24px"}}><div style={{fontSize:52,marginBottom:14}}>📊</div><h3 style={{color:C.muted,marginBottom:8}}>No estimates yet</h3><button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"}} onClick={onNew}>Create First Estimate →</button></div>
-        ):(
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {filtered.map(est=>{const sc=STATUS_COL[est.pipelineStatus]||C.muted;return(
-              <div key={est.id} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",cursor:"pointer"}} className="fc" onClick={()=>onView(est)}>
-                <div style={{flex:1,minWidth:160}}><div style={{fontWeight:700,fontSize:14,marginBottom:3}}>{est.projectName||"Unnamed"}</div><div style={{fontSize:11,color:C.muted}}>{est._clientName&&`👤 ${est._clientName}  `}{est.date&&`📅 ${est.date}`}</div></div>
-                <div style={{fontSize:18,fontWeight:700,color:C.gold,flexShrink:0}}>{fmt(est.grandTotal||est.totalCost)}</div>
-                <select style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"},width:"auto",fontSize:12,padding:"5px 8px",color:sc,background:C.card}} value={est.pipelineStatus||"Quote Sent"} onChange={e=>{e.stopPropagation();onStatus(est.id,e.target.value);}}>
-                  {STATUSES.map(st=><option key={st}>{st}</option>)}
-                </select>
-                <button style={{background:"none",border:`1px solid ${C.red}44`,color:C.red,padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:12,flexShrink:0}} onClick={e=>{e.stopPropagation();onDelete(est.id);}}>🗑</button>
-              </div>
-            );})}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
