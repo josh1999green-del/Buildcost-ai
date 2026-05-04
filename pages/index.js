@@ -349,15 +349,23 @@ const today  = () => new Date().toLocaleDateString("en-GB");
 const STEPS = ["Reading drawings…","Analysing dimensions…","Computing quantities…","Applying UK 2025 rates…","Compiling BOQ…","Generating report…"];
 
 const extractJSON = raw => {
-  const stripped = raw.replace(/`/g, "").replace(/json/gi, "").trim();
-  let s = stripped.indexOf("{");
-  let e = stripped.lastIndexOf("}");
-  if (s >= 0 && e > s) {
-    try { return JSON.parse(stripped.slice(s, e+1)); } catch(err) {
-      throw new Error("JSON parse error: " + err.message + " in: " + stripped.slice(s, s+100));
-    }
+  const stripped = raw.replace(/`/g,"").replace(/^\s*json\s*/i,"").trim();
+  const s = stripped.indexOf("{");
+  const e = stripped.lastIndexOf("}");
+  if (s < 0) throw new Error("No JSON object found");
+  const jsonStr = e > s ? stripped.slice(s, e+1) : stripped.slice(s);
+  try { return JSON.parse(jsonStr); } catch {}
+  // Try to fix truncated JSON by closing open brackets
+  let fixed = jsonStr;
+  let opens = (fixed.match(/\[/g)||[]).length - (fixed.match(/\]/g)||[]).length;
+  let openb = (fixed.match(/\{/g)||[]).length - (fixed.match(/\}/g)||[]).length;
+  // Remove trailing incomplete key-value
+  fixed = fixed.replace(/,\s*"[^"]*":\s*[^,\}\]]*$/,"");
+  fixed = fixed.replace(/,\s*"[^"]*":\s*"[^"]*$/,"");
+  fixed += "]".repeat(Math.max(0,opens)) + "}".repeat(Math.max(0,openb));
+  try { return JSON.parse(fixed); } catch(e2) {
+    throw new Error("Could not parse: " + e2.message);
   }
-  throw new Error("No JSON found in: " + raw.substring(0,100));
 };
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
