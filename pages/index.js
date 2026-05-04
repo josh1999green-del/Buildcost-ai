@@ -315,6 +315,7 @@ const MERCHANTS = [
   "Bradfords", "National Timber Group", "Parker Building Supplies", "Other",
 ];
 
+const REGIONS = [
   { id:"london",     label:"London & SE",         multiplier:1.25 },
   { id:"southeast",  label:"South East",           multiplier:1.12 },
   { id:"southwest",  label:"South West",           multiplier:1.05 },
