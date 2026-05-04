@@ -441,11 +441,24 @@ export default function App() {
 Price all fixings and fittings according to these preferences. Include every individual item.`,
       ].filter(Boolean).join("\n");
 
+      // Convert image files to base64 for AI vision
+      const imagePayloads = [];
+      const imageFiles = files.filter(f => f.type.startsWith("image/"));
+      for (const file of imageFiles.slice(0, 10)) {
+        const b64 = await new Promise((res, rej) => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result.split(",")[1]);
+          reader.onerror = rej;
+          reader.readAsDataURL(file);
+        });
+        imagePayloads.push({ data: b64, mediaType: file.type });
+      }
+
       // Call our own API route — no CORS issues, key is on the server
       const resp=await fetch("/api/estimate",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({systemPrompt:SYSTEM_PROMPT,userPrompt}),
+        body:JSON.stringify({systemPrompt:SYSTEM_PROMPT,userPrompt,images:imagePayloads}),
       });
       clearInterval(timer);
       const data=await resp.json();
@@ -488,13 +501,81 @@ Price all fixings and fittings according to these preferences. Include every ind
   };
   const toggleMerchant = m => setMerchants(prev => prev.includes(m) ? prev.filter(x=>x!==m) : [...prev, m]);
 
+  const exportExcel = (est) => {
+    if (!est) return;
+    const rows = [];
+    // Header
+    rows.push(["BuildCostAI — Bill of Quantities"]);
+    rows.push(["Project:", est.projectName || ""]);
+    rows.push(["Client:", est._clientName || ""]);
+    rows.push(["Site:", est._siteAddr || ""]);
+    rows.push(["Ref:", est.projectRef || ""]);
+    rows.push(["Date:", est.date || new Date().toLocaleDateString("en-GB")]);
+    rows.push(["Timeline:", est.timeline || ""]);
+    rows.push([]);
+    rows.push(["Ref", "Description", "Detail", "Qty", "Unit", "Unit Rate £", "Total £", "Supplier"]);
+    // Items
+    (est.categories || []).forEach(cat => {
+      rows.push([]);
+      rows.push([cat.icon + " " + cat.name]);
+      (cat.items || []).forEach(item => {
+        rows.push([
+          item.ref || "",
+          item.name || "",
+          item.description || "",
+          item.quantity || 0,
+          item.unit || "",
+          item.unitCost || 0,
+          item.totalCost || 0,
+          item.supplier || "",
+        ]);
+      });
+      rows.push(["", "", "", "", "", "SUBTOTAL", cat.subtotal || 0, ""]);
+    });
+    // Totals
+    rows.push([]);
+    rows.push(["", "", "", "", "", "Sub Total", est.totalCost || 0, ""]);
+    rows.push(["", "", "", "", "", `Contingency (${est.contingencyPercent || 10}%)`, est.contingency || 0, ""]);
+    if (est.designFees > 0) rows.push(["", "", "", "", "", "Design Fees", est.designFees, ""]);
+    rows.push(["", "", "", "", "", "VAT (20%)", est.vatAmount || 0, ""]);
+    rows.push(["", "", "", "", "", "TOTAL INC VAT", est.grandTotal || est.totalCost || 0, ""]);
+    rows.push([]);
+    rows.push(["Exclusions:"]);
+    (est.exclusions || []).forEach(e => rows.push(["", e]));
+    rows.push(["Inclusions:"]);
+    (est.inclusions || []).forEach(e => rows.push(["", e]));
+    rows.push([]);
+    rows.push(["AI estimates are indicative. Always verify with a qualified QS for tender purposes."]);
+
+    // Convert to CSV (Excel-compatible)
+    const csv = rows.map(row =>
+      row.map(cell => {
+        const s = String(cell ?? "");
+        return s.includes(",") || s.includes('"') || s.includes("
+")
+          ? '"' + s.replace(/"/g, '""') + '"'
+          : s;
+      }).join(",")
+    ).join("
+");
+
+    const BOM = "﻿";
+    const blob = new Blob([BOM + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(est.projectName || "estimate").replace(/[^a-z0-9]/gi, "-")}-BOQ.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <>
       <Head><title>BuildCostAI — Construction Estimating</title><meta name="viewport" content="width=device-width,initial-scale=1"/></Head>
       {view==="landing"   && <Landing   onStart={()=>setView("upload")} onDash={()=>setView("dashboard")} hasEsts={estimates.length>0} />}
       {view==="upload"    && <UploadScr files={files} setFiles={setFiles} onFiles={handleFiles} fileRef={fileRef} dragOver={dragOver} setDragOver={setDragOver} projType={projType} setProjType={setProjType} projDesc={projDesc} setProjDesc={setProjDesc} clientName={clientName} setClientName={setClientName} clientEmail={clientEmail} setClientEmail={setClientEmail} siteAddr={siteAddr} setSiteAddr={setSiteAddr} siteContact={siteContact} setSiteContact={setSiteContact} siteNotes={siteNotes} setSiteNotes={setSiteNotes} intNote={intNote} setIntNote={setIntNote} exclusions={exclusions} setExclusions={setExclusions} overhead={overhead} setOverhead={setOverhead} region={region} setRegion={setRegion} merchants={merchants} toggleMerchant={toggleMerchant} showSettings={showSettings} setShowSettings={setShowSettings} error={error} onSubmit={runEstimate} onDemo={runDemo} onBack={()=>setView("landing")} fixings={fixings} setFixings={setFixings} />}
       {view==="loading"   && <LoadingScr step={loadStep} />}
-      {view==="results"   && <ResultsScr result={result} expandCat={expandCat} setExpandCat={setExpandCat} activeTab={activeTab} setActiveTab={setActiveTab} onNew={reset} onDash={()=>setView("dashboard")} editMode={editMode} setEditMode={setEditMode} onUpdate={patch=>updateEst(result.id,patch)} onDelete={()=>deleteEst(result.id)} emailModal={emailModal} setEmailModal={setEmailModal} emailSent={emailSent} setEmailSent={setEmailSent} labourRates={labourRates} setLabourRates={setLabourRates} profitMargin={profitMargin} setProfitMargin={setProfitMargin} />}
+      {view==="results"   && <ResultsScr exportExcel={exportExcel} result={result} expandCat={expandCat} setExpandCat={setExpandCat} activeTab={activeTab} setActiveTab={setActiveTab} onNew={reset} onDash={()=>setView("dashboard")} editMode={editMode} setEditMode={setEditMode} onUpdate={patch=>updateEst(result.id,patch)} onDelete={()=>deleteEst(result.id)} emailModal={emailModal} setEmailModal={setEmailModal} emailSent={emailSent} setEmailSent={setEmailSent} labourRates={labourRates} setLabourRates={setLabourRates} profitMargin={profitMargin} setProfitMargin={setProfitMargin} />}
       {view==="dashboard" && <DashScr   estimates={estimates} onNew={()=>setView("upload")} onView={e=>{setResult(e);setExpandCat(e.categories?.[0]?.name);setActiveTab("breakdown");setEditMode(false);setView("results");}} onBack={()=>setView("landing")} onStatus={(id,s)=>updateEst(id,{pipelineStatus:s})} onDelete={deleteEst} />}
     </>
   );
@@ -856,6 +937,7 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
           <div style={{display:"flex",gap:8,marginTop:18,flexWrap:"wrap"}}>
             <Abtn onClick={()=>window.print()}>🖨️ Print / PDF</Abtn>
             <Abtn onClick={()=>setEmailModal(true)}>📧 Email Client</Abtn>
+            <Abtn onClick={()=>exportExcel(result)}>📊 Download Excel</Abtn>
             <Abtn onClick={()=>editMode?saveEdits():setEditMode(true)} gold={editMode}>{editMode?"💾 Save Changes":"✏️ Edit Estimate"}</Abtn>
             {editMode&&<Abtn onClick={()=>{setEditMode(false);setEditRes(result);}}>✕ Cancel</Abtn>}
             <Abtn onClick={()=>setDelConfirm(true)} danger>🗑 Delete</Abtn>
