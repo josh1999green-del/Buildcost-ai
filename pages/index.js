@@ -375,6 +375,14 @@ export default function App() {
   const [region,      setRegion]      = useState("northwest");
   const [merchants,   setMerchants]   = useState(["Jewson","Travis Perkins","MKM Building Supplies"]);
   const [showSettings,setShowSettings]= useState(false);
+  const [optionalExtras, setOptionalExtras] = useState({
+    asbestos: false,
+    batSurvey: false,
+    watchingBrief: false,
+    trafficManagement: false,
+    cdmCoordinator: false,
+    partyWall: false,
+  });
   // Labour rates — what you pay your lads per day
   const [labourRates, setLabourRates] = useState({
     labourer:    { label:"Labourer",          rate:180 },
@@ -443,6 +451,12 @@ export default function App() {
 - Pipe material: ${fixings.pipeMaterial === "copper" ? "use copper pipe throughout" : fixings.pipeMaterial === "plastic" ? "use plastic pipe (MDPE/barrier pipe) throughout" : "mix copper and plastic as appropriate"}
 - Electrical cable routing: ${fixings.electrical === "clipped" ? "clip cables directly to surfaces" : fixings.electrical === "conduit" ? "run cables in conduit throughout" : "run cables in trunking throughout"}
 Price all fixings and fittings according to these preferences. Include every individual item.`,
+      optionalExtras.asbestos && "Include: Asbestos survey and removal allowance (pre-2000 building)",
+        optionalExtras.batSurvey && "Include: Bat/ecology survey costs required by planning",
+        optionalExtras.watchingBrief && "Include: Archaeological watching brief required by planning",
+        optionalExtras.trafficManagement && "Include: Traffic management and parking suspension permit costs",
+        optionalExtras.cdmCoordinator && "Include: CDM coordinator fees (Construction Design Management)",
+        optionalExtras.partyWall && "Include: Party wall surveyor fees for both sides",
       ].filter(Boolean).join("\n");
 
       // Convert image files to base64 for AI vision
@@ -573,7 +587,7 @@ Price all fixings and fittings according to these preferences. Include every ind
     <>
       <Head><title>BuildCostAI — Construction Estimating</title><meta name="viewport" content="width=device-width,initial-scale=1"/></Head>
       {view==="landing"   && <Landing   onStart={()=>setView("upload")} onDash={()=>setView("dashboard")} hasEsts={estimates.length>0} />}
-      {view==="upload"    && <UploadScr files={files} setFiles={setFiles} onFiles={handleFiles} fileRef={fileRef} dragOver={dragOver} setDragOver={setDragOver} projType={projType} setProjType={setProjType} projDesc={projDesc} setProjDesc={setProjDesc} clientName={clientName} setClientName={setClientName} clientEmail={clientEmail} setClientEmail={setClientEmail} siteAddr={siteAddr} setSiteAddr={setSiteAddr} siteContact={siteContact} setSiteContact={setSiteContact} siteNotes={siteNotes} setSiteNotes={setSiteNotes} intNote={intNote} setIntNote={setIntNote} exclusions={exclusions} setExclusions={setExclusions} overhead={overhead} setOverhead={setOverhead} region={region} setRegion={setRegion} merchants={merchants} toggleMerchant={toggleMerchant} showSettings={showSettings} setShowSettings={setShowSettings} error={error} onSubmit={runEstimate} onDemo={runDemo} onBack={()=>setView("landing")} fixings={fixings} setFixings={setFixings} />}
+      {view==="upload"    && <UploadScr files={files} setFiles={setFiles} onFiles={handleFiles} fileRef={fileRef} dragOver={dragOver} setDragOver={setDragOver} projType={projType} setProjType={setProjType} projDesc={projDesc} setProjDesc={setProjDesc} clientName={clientName} setClientName={setClientName} clientEmail={clientEmail} setClientEmail={setClientEmail} siteAddr={siteAddr} setSiteAddr={setSiteAddr} siteContact={siteContact} setSiteContact={setSiteContact} siteNotes={siteNotes} setSiteNotes={setSiteNotes} intNote={intNote} setIntNote={setIntNote} exclusions={exclusions} setExclusions={setExclusions} overhead={overhead} setOverhead={setOverhead} region={region} setRegion={setRegion} merchants={merchants} toggleMerchant={toggleMerchant} showSettings={showSettings} setShowSettings={setShowSettings} error={error} onSubmit={runEstimate} onDemo={runDemo} onBack={()=>setView("landing")} optionalExtras={optionalExtras} setOptionalExtras={setOptionalExtras} fixings={fixings} setFixings={setFixings} />}
       {view==="loading"   && <LoadingScr step={loadStep} />}
       {view==="results"   && <ResultsScr exportExcel={exportExcel} result={result} expandCat={expandCat} setExpandCat={setExpandCat} activeTab={activeTab} setActiveTab={setActiveTab} onNew={reset} onDash={()=>setView("dashboard")} editMode={editMode} setEditMode={setEditMode} onUpdate={patch=>updateEst(result.id,patch)} onDelete={()=>deleteEst(result.id)} emailModal={emailModal} setEmailModal={setEmailModal} emailSent={emailSent} setEmailSent={setEmailSent} labourRates={labourRates} setLabourRates={setLabourRates} profitMargin={profitMargin} setProfitMargin={setProfitMargin} />}
       {view==="dashboard" && <DashScr   estimates={estimates} onNew={()=>setView("upload")} onView={e=>{setResult(e);setExpandCat(e.categories?.[0]?.name);setActiveTab("breakdown");setEditMode(false);setView("results");}} onBack={()=>setView("landing")} onStatus={(id,s)=>updateEst(id,{pipelineStatus:s})} onDelete={deleteEst} />}
