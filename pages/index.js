@@ -1093,3 +1093,23 @@ function DashScr({estimates,onNew,onView,onBack,onStatus,onDelete}){
         </div>
         <input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box",marginBottom:18}} placeholder="🔍 Search project or client…" value={search} onChange={e=>setSearch(e.target.value)}/>
         {estimates.length===0?(
+
+          <div style={{textAlign:"center",padding:"60px 24px"}}><div style={{fontSize:52,marginBottom:14}}>📊</div><h3 style={{color:C.muted,marginBottom:8}}>No estimates yet</h3><button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"}} onClick={onNew}>Create First Estimate →</button></div>
+        ):(
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {filtered.map(est=>{const sc=STATUS_COL[est.pipelineStatus]||C.muted;return(
+              <div key={est.id} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",cursor:"pointer"}} onClick={()=>onView(est)}>
+                <div style={{flex:1,minWidth:160}}><div style={{fontWeight:700,fontSize:14,marginBottom:3}}>{est.projectName||"Unnamed"}</div><div style={{fontSize:11,color:C.muted}}>{est._clientName&&`👤 ${est._clientName}  `}{est.date&&`📅 ${est.date}`}</div></div>
+                <div style={{fontSize:18,fontWeight:700,color:C.gold,flexShrink:0}}>{fmt(est.grandTotal||est.totalCost)}</div>
+                <select style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:sc,fontSize:14,boxSizing:"border-box",width:"auto",fontSize:12,padding:"5px 8px"}} value={est.pipelineStatus||"Quote Sent"} onChange={e=>{e.stopPropagation();onStatus(est.id,e.target.value);}}>
+                  {STATUSES.map(st=><option key={st}>{st}</option>)}
+                </select>
+                <button style={{background:"none",border:`1px solid ${C.red}44`,color:C.red,padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:12,flexShrink:0}} onClick={e=>{e.stopPropagation();onDelete(est.id);}}>🗑</button>
+              </div>
+            );})}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
