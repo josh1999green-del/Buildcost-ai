@@ -551,8 +551,7 @@ Price all fixings and fittings according to these preferences. Include every ind
     const csv = rows.map(row =>
       row.map(cell => {
         const s = String(cell ?? "");
-        return s.includes(",") || s.includes('"') || s.includes("
-")
+        return s.includes(",") || s.includes('"') || s.includes("\n")
           ? '"' + s.replace(/"/g, '""') + '"'
           : s;
       }).join(",")
