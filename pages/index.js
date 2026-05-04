@@ -381,13 +381,13 @@ Price all fixings and fittings according to these preferences. Include every ind
       // Convert and compress images for AI vision
       const imagePayloads = [];
       const imageFiles = files.filter(f => f.type.startsWith("image/"));
-      for (const file of imageFiles.slice(0, 3)) {
+      for (const file of imageFiles.slice(0, 1)) {
         const b64 = await new Promise((res, rej) => {
           const img = new Image();
           const url = URL.createObjectURL(file);
           img.onload = () => {
             const canvas = document.createElement("canvas");
-            const MAX = 1024;
+            const MAX = 800;
             let w = img.width, h = img.height;
             if (w > MAX || h > MAX) {
               if (w > h) { h = Math.round(h * MAX/w); w = MAX; }
@@ -396,7 +396,7 @@ Price all fixings and fittings according to these preferences. Include every ind
             canvas.width = w; canvas.height = h;
             canvas.getContext("2d").drawImage(img, 0, 0, w, h);
             URL.revokeObjectURL(url);
-            res(canvas.toDataURL("image/jpeg", 0.7).split(",")[1]);
+            res(canvas.toDataURL("image/jpeg", 0.5).split(",")[1]);
           };
           img.onerror = rej;
           img.src = url;
