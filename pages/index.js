@@ -109,7 +109,19 @@ ALWAYS include a "Preliminaries & Site Establishment" category with:
 - Material collection runs - van fuel for picking up materials from merchants (price per week)
 - Generator hire and diesel fuel if mains power not available on site
 
-Price every single item. Leave nothing out. A proper BOQ prices every nail and every tube of sealant.`;
+Price every single item. Leave nothing out. A proper BOQ prices every nail and every tube of sealant.
+
+STANDARD FEES AND COSTS TO ALWAYS INCLUDE WHERE RELEVANT:
+- Building regulations application fee (approx £200-800 depending on project value)
+- Building control inspection fees
+- Structural engineer fees (design, calculations and site inspections)
+- Waste disposal and recycling costs (allow % of materials value)
+- Environmental protection measures (dust sheets, hoarding, neighbour protection)
+- Temporary water connection to site
+- Temporary electrical connection/supply to site
+- Snagging and defects rectification allowance (1% of contract value)
+- First aid kit and site welfare supplies
+- Tool testing and PAT certification`;
 
 const FAIRHAVEN_SPECS = `PROJECT: Ground floor rear extension + internal refurbishment, 2 Fairhaven Avenue, Chorlton, Manchester M21 8TW. Architect: Darwent Architecture March 2026. Drawings BR007-BR014.
 
