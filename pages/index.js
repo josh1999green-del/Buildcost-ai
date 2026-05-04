@@ -626,7 +626,7 @@ function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType
                 </div>
               ))}
             </div>
-            <button style={{background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0},marginTop:10}} onClick={()=>fileRef.current.click()}>+ Add more files</button>
+            <button style={{background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0,marginTop:10}} onClick={()=>fileRef.current.click()}>+ Add more files</button>
           </div>
         )}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}} className="g2">
