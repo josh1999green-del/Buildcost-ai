@@ -378,17 +378,30 @@ Price all fixings and fittings according to these preferences. Include every ind
         optionalExtras.partyWall && "Include: Party wall surveyor fees for both sides",
       ].filter(Boolean).join("\n");
 
-      // Convert image files to base64 for AI vision
+      // Convert and compress images for AI vision
       const imagePayloads = [];
       const imageFiles = files.filter(f => f.type.startsWith("image/"));
-      for (const file of imageFiles.slice(0, 10)) {
+      for (const file of imageFiles.slice(0, 3)) {
         const b64 = await new Promise((res, rej) => {
-          const reader = new FileReader();
-          reader.onload = () => res(reader.result.split(",")[1]);
-          reader.onerror = rej;
-          reader.readAsDataURL(file);
+          const img = new Image();
+          const url = URL.createObjectURL(file);
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const MAX = 1024;
+            let w = img.width, h = img.height;
+            if (w > MAX || h > MAX) {
+              if (w > h) { h = Math.round(h * MAX/w); w = MAX; }
+              else { w = Math.round(w * MAX/h); h = MAX; }
+            }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+            URL.revokeObjectURL(url);
+            res(canvas.toDataURL("image/jpeg", 0.7).split(",")[1]);
+          };
+          img.onerror = rej;
+          img.src = url;
         });
-        imagePayloads.push({ data: b64, mediaType: file.type });
+        imagePayloads.push({ data: b64, mediaType: "image/jpeg" });
       }
 
       // Call our own API route — no CORS issues, key is on the server
