@@ -356,7 +356,7 @@ const extractJSON = raw => {
     let ob=0,ab=0; for(const c of p){if(c==="{")ob++;else if(c==="}")ob--;else if(c==="[")ab++;else if(c==="]")ab--;}
     try{return JSON.parse(p+"]".repeat(Math.max(0,ab))+"}".repeat(Math.max(0,ob)));}catch{}
   }
-  throw new Error("Parse failed. First 200 chars: " + text.substring(0,200));
+  throw new Error("Parse failed. Raw start: " + raw.substring(0,150) + " ... Raw end: " + raw.substring(raw.length-150)); First 200 chars: " + text.substring(0,200));
 };
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
