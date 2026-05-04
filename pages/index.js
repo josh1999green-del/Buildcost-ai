@@ -349,10 +349,13 @@ const today  = () => new Date().toLocaleDateString("en-GB");
 const STEPS = ["Reading drawings…","Analysing dimensions…","Computing quantities…","Applying UK 2025 rates…","Compiling BOQ…","Generating report…"];
 
 const extractJSON = raw => {
-  let s = raw.indexOf("{");
-  let e = raw.lastIndexOf("}");
+  const stripped = raw.replace(/`/g, "").replace(/json/gi, "").trim();
+  let s = stripped.indexOf("{");
+  let e = stripped.lastIndexOf("}");
   if (s >= 0 && e > s) {
-    try { return JSON.parse(raw.slice(s, e+1)); } catch {}
+    try { return JSON.parse(stripped.slice(s, e+1)); } catch(err) {
+      throw new Error("JSON parse error: " + err.message + " in: " + stripped.slice(s, s+100));
+    }
   }
   throw new Error("No JSON found in: " + raw.substring(0,100));
 };
