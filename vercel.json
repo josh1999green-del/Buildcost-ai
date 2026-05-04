@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "pages/api/estimate.js": {
+      "maxDuration": 60
+    }
+  }
+}
