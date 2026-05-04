@@ -1003,6 +1003,17 @@ function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,
   const disp=editMode?editRes:r;
   return(
     <div style={{minHeight:"100vh",background:C.bg,color:C.text}} id="pr">
+      {/* Print-only branded header */}
+      {(companyName||companyPhone||companyEmail)&&(
+        <div className="print-only" style={{borderBottom:"3px solid #d4a853",paddingBottom:16,marginBottom:24,padding:"20px 24px"}}>
+          {companyName&&<div style={{fontSize:22,fontWeight:700}}>{companyName}</div>}
+          <div style={{display:"flex",gap:20,marginTop:6,fontSize:12}}>
+            {companyPhone&&<span>📞 {companyPhone}</span>}
+            {companyEmail&&<span>✉ {companyEmail}</span>}
+            {companyAddress&&<span>📍 {companyAddress}</span>}
+          </div>
+        </div>
+      )}
       <Nav onNew={onNew} onDash={onDash}/>
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"32px 0 24px"}} className="no-print">
         <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px"}}>
