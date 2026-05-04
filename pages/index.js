@@ -327,11 +327,6 @@ const MERCHANTS = [
   { id:"nireland",   label:"Northern Ireland",     multiplier:0.90 },
 ];
 
-const MERCHANTS = [
-  "Jewson", "Travis Perkins", "MKM Building Supplies", "Selco",
-  "Buildbase", "Screwfix", "Toolstation", "CCF", "SIG", "Huws Gray",
-  "Bradfords", "National Timber Group", "Parker Building Supplies", "Other",
-];
 
 
 
