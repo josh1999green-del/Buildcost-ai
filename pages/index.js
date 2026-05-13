@@ -1,1202 +1,952 @@
-import { useState, useRef, useCallback, useEffect } from "react";
-import Head from "next/head";
+import { useState, useEffect } from 'react';
+import Head from 'next/head';
 
-// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+const STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
 
-const PROJECT_TYPES = ["Rear Extension","Loft Conversion","New Build","Basement","Garage Conversion","Refurbishment","Kitchen Fit-out","Bathroom Fit-out","Commercial Fit-out","Groundworks Only","Roofing","Other"];
-const STATUSES = ["Quote Sent","In Discussion","Won","Lost","On Hold"];
-const STATUS_COL = {"Quote Sent":"#f59e0b","In Discussion":"#60a5fa","Won":"#4caf50","Lost":"#ef5350","On Hold":"#888"};
-
-const SYSTEM_PROMPT = `You are a UK quantity surveyor. Output ONLY a JSON object, no markdown, no backticks, no explanation.
-
-JSON format:
-{"projectName":"","projectType":"","projectRef":"","summary":"","totalCost":0,"laborCost":0,"materialCost":0,"plantCost":0,"prelimsCost":0,"contingency":0,"contingencyPercent":10,"designFees":0,"vatAmount":0,"grandTotal":0,"timeline":"","confidence":"High","confidenceReason":"","notes":[],"exclusions":[],"inclusions":[],"categories":[{"name":"","icon":"","subtotal":0,"items":[{"ref":"","name":"","description":"","quantity":0,"unit":"","unitCost":0,"totalCost":0,"supplier":"","notes":""}]}]}
-
-Rules:
-- Use 2025 UK prices
-- Max 6 categories, max 10 items each
-- Always include Preliminaries category with: scaffold, skip hire, site toilet, plant diesel, van diesel to/from site
-- Include building regs fee, structural engineer fee, snagging allowance
-- vatAmount = grandTotal - totalCost - contingency
-- grandTotal = (totalCost + contingency) * 1.2
-- Output must be under 3000 tokens total`;
-
-const FAIRHAVEN_SPECS = `PROJECT: Ground floor rear extension + internal refurbishment, 2 Fairhaven Avenue, Chorlton, Manchester M21 8TW. Architect: Darwent Architecture March 2026. Drawings BR007-BR014.
-
-EXTERNAL WALLS WT1: 100mm 7N blockwork outer, 90mm Recticel Eurowall+ full-fill cavity insulation, 100mm 7N blockwork inner. Wall ties 750mm horiz/450mm vert. 12.5mm skimmed plasterboard on dabs internally. Silicone render externally. U-value 0.18.
-EXISTING WALL DRYLINING WT2: 25x50mm sw battens, 77.5mm Recticel Eurothane PL insulated plasterboard. U-value 0.30.
-INTERNAL STUD WALLS WT3: 100x50mm sw studwork 600ctrs, 100mm mineral wool, 12.5mm plasterboard both sides. Wet areas: moisture resistant PB + Schluter-KERDI-BOARD tanking.
-ACOUSTIC WALLS WT4: 100x50mm C16 studwork, mineral wool, Gypframe RB1 resilient bars 600ctrs, 2x 12.5mm Gyproc Soundbloc both sides.
-BLOCKWORK WALLS WT5: 100mm 7N blockwork, 12.5mm plasterboard on dabs.
-EXTENSION FLOOR: 25mm sand blinding, 150mm hardcore, 1200g DPM, 100mm RC25 slab A142 mesh, 100mm Recticel Eurothane GP insulation, 500g DPM, UFH pipes, 75mm sand/cement screed, porcelain tiles 300x400mm on Schluter-DITRA 25. U-value 0.17.
-FOUNDATIONS FND1: 600x225mm GEN3 mass concrete strip footing min -0.9m. Footprint approx 6.69x6.58m.
-STEEL BEAMS: BM1: 2no 152x89UB bolted. BM2: 120x60RHS6.3 S355 cranked. BM3: 2no 305x102UB28 S355 bolted. BM4: 300x100RHS10 + 8mm plate welded u/s.
-PADSTONES: PS1: 440x215x150mm C40/50. PS2-3: 215x100x150mm. PS4: 2no 440x100x215mm. PS5: 600x100x300mm.
-LINTELS: LB1: Catnic CG100/100. LB2: Catnic CG50/100. LB3: Catnic CG100/100/2100. LB4: Catnic BHD100.
-OAK POSTS TP1: 250x75mm C30 oak posts, galvanised base plates.
-ROOF STRUCTURE: 175x47mm C24 rafters 400ctrs. Hip/ridge/trimmer beams TB1-TB7: 2no 47x175 C24 bolted. 100x50mm wallplate + hold-down straps. Rooflight trimmed opening 2200x1120mm.
-ZINC STANDING SEAM ROOF: 18mm marine ply, Aludex Max VCL, Metdeck composite panel (Kingspan Resol foam), VMZINC Pigmento Brown. 12.5mm plasterboard underside. U-value 0.15.
-ROSEMARY TILED LEAN-TO: Clay rosemary tiles, Code 4 lead flashing, 25x50 battens on Proctor breather membrane, 150x50 C24 rafters 400ctrs, 120mm Recticel between rafters, 50mm Recticel + VCL underside, plasterboard. U-value 0.15.
-ROOFLIGHT: 2.2x1.12m Velux Vario fixed, 300mm insulated upstands. U-value 1.3.
-DOORS: ED1: SMART Alitherm aluminium RAL7035 U1.4. ED2: SMART Invisoglide 3-pane sliding RAL7035 U1.4. ED3: Aluminium French door RAL7035 U1.4. ED4: Aluminium patio doors U1.4.
-WINDOWS: W1-W3: Slim uPVC RAL7035 U1.4. W4: Aluminium obscure glazing. Oriel window copper reveals.
-ELECTRICAL: ~40nr double sockets USB-A+C. LED recessed spotlights throughout. UFH manifold to extension. Electric UFH to en-suite. 5no new radiators various BTU. Heated towel rail. Kitchen extract 30 l/s. WC extract 15 l/s. Utility extract 30 l/s. Cat6 data sockets. Security: cameras, contacts, PIR, keypad. Smoke/CO alarms. EV charging point.
-PLUMBING/HEATING: Boiler relocated. New boiler flue. UFH to extension. En-suite: shower, WC, basin. WC: WC, basin. Utility: sink, washer/dryer. New MH x2. Pop-up gullies x5. SVP relocated. RWP x4.
-EXTERNAL: Indian limestone paving on mortar over 150mm hardcore. 1.8m brick wall + timber fence. New gate. EV charge point.
-FINISHES: Silicone render all new external walls. Re-skim existing hall/stairs/landing. Plasterboard and skim all new walls/ceilings. Black uPVC gutters/downpipes. Code 4 lead flashings.
-EXCLUDE: Kitchen units and appliances (by others). Landscaping/lawn (by others). Window seat joinery (by others). Built-in storage (by others).`;
-
-const DEMO_ESTIMATE = {
-  projectName: "Rear Extension — 4m x 5m (DEMO)",
-  projectType: "Rear Extension",
-  projectRef: "BCO-DEMO-001",
-  summary: "Single storey rear extension with brick and block cavity wall construction, zinc standing seam flat roof with rooflight, bi-fold doors to rear, underfloor heating throughout, full electrical and plumbing installation. This is a DEMO estimate — add your Anthropic API key to generate real estimates.",
-  totalCost: 68420,
-  laborCost: 28500,
-  materialCost: 39920,
-  plantCost: 2100,
-  prelimsCost: 4800,
-  contingency: 6842,
-  contingencyPercent: 10,
-  designFees: 0,
-  vatAmount: 15052,
-  grandTotal: 90314,
-  timeline: "14-18 weeks",
-  confidence: "High",
-  confidenceReason: "Demo estimate based on typical North West pricing",
-  notes: [
-    "This is a DEMO estimate — real estimates require an Anthropic API key",
-    "Prices based on North West UK market rates 2025",
-    "All quantities based on typical 4m x 5m single storey rear extension",
-    "Scaffold included for full duration of works"
-  ],
-  exclusions: [
-    "Kitchen units and appliances (by others)",
-    "Floor finishes to existing areas",
-    "Landscaping and garden works"
-  ],
-  inclusions: [
-    "All labour and materials",
-    "Site toilet and welfare throughout",
-    "All tool and plant hire",
-    "Scaffold for full duration"
-  ],
-  categories: [
-    { name:"Demolition & Clearance", icon:"🔨", subtotal:2850,
-      items:[
-        {ref:"A1",name:"Remove existing rear doors/windows",description:"Strip out 2no existing rear openings",quantity:2,unit:"nr",unitCost:175,totalCost:350,supplier:"N/A",notes:""},
-        {ref:"A2",name:"Break out existing concrete slab",description:"Break out and remove 20m2 slab",quantity:20,unit:"m²",unitCost:44,totalCost:880,supplier:"N/A",notes:""},
-        {ref:"A3",name:"General demolition & clearance",description:"Strip out and remove debris",quantity:1,unit:"nr",unitCost:820,totalCost:820,supplier:"N/A",notes:""},
-        {ref:"A4",name:"Skip hire — demolition",description:"2no 8-yard skips",quantity:2,unit:"nr",unitCost:400,totalCost:800,supplier:"Local hire",notes:""}
-      ]
-    },
-    { name:"Groundworks & Foundations", icon:"🌱", subtotal:9800,
-      items:[
-        {ref:"B1",name:"Strip foundations 600x225mm",description:"GEN3 mass concrete strip footing",quantity:22,unit:"m",unitCost:180,totalCost:3960,supplier:"Jewson",notes:"Min -0.9m below ground"},
-        {ref:"B2",name:"Hardcore filling 150mm",description:"Compacted MOT Type 1",quantity:20,unit:"m²",unitCost:18,totalCost:360,supplier:"MKM",notes:""},
-        {ref:"B3",name:"Concrete slab RC25 100mm",description:"A142 mesh reinforcement",quantity:20,unit:"m²",unitCost:68,totalCost:1360,supplier:"Jewson",notes:""},
-        {ref:"B4",name:"DPM 1200 gauge",description:"Taped seams, continuous",quantity:20,unit:"m²",unitCost:4,totalCost:80,supplier:"Travis Perkins",notes:""},
-        {ref:"B5",name:"New manhole complete",description:"Precast concrete MH + cover",quantity:1,unit:"nr",unitCost:850,totalCost:850,supplier:"Jewson",notes:""},
-        {ref:"B6",name:"Drainage connections",description:"Pop-up gullies and connections",quantity:3,unit:"nr",unitCost:230,totalCost:690,supplier:"Travis Perkins",notes:""},
-        {ref:"B7",name:"Sand blinding 25mm",description:"Over hardcore prior to DPM",quantity:20,unit:"m²",unitCost:8,totalCost:160,supplier:"MKM",notes:""},
-        {ref:"B8",name:"Excavation and disposal",description:"Machine dig and remove spoil",quantity:25,unit:"m³",unitCost:46,totalCost:1150,supplier:"N/A",notes:""}
-      ]
-    },
-    { name:"Structural Steelwork", icon:"🔩", subtotal:5200,
-      items:[
-        {ref:"C1",name:"Steel beam RSJ supply & fix",description:"2no 152x89UB bolted together",quantity:1,unit:"nr",unitCost:1850,totalCost:1850,supplier:"Travis Perkins",notes:"To SE design"},
-        {ref:"C2",name:"Padstones C40/50 concrete",description:"440x215x150mm padstones",quantity:4,unit:"nr",unitCost:185,totalCost:740,supplier:"Jewson",notes:""},
-        {ref:"C3",name:"Catnic lintels supply & fix",description:"CG100/100 with 150mm bearing",quantity:4,unit:"nr",unitCost:145,totalCost:580,supplier:"Travis Perkins",notes:""},
-        {ref:"C4",name:"Structural engineer fees",description:"Design, calcs and inspections",quantity:1,unit:"nr",unitCost:1200,totalCost:1200,supplier:"N/A",notes:""},
-        {ref:"C5",name:"Steelwork encasing Fireline",description:"Gyproc Fireline board to all steels",quantity:8,unit:"m²",unitCost:104,totalCost:830,supplier:"Travis Perkins",notes:""}
-      ]
-    },
-    { name:"Masonry & Brickwork", icon:"🧱", subtotal:11200,
-      items:[
-        {ref:"D1",name:"Cavity wall WT1 — new extension",description:"100mm blockwork, 90mm insulation, block",quantity:42,unit:"m²",unitCost:185,totalCost:7770,supplier:"MKM",notes:"U-value 0.18"},
-        {ref:"D2",name:"Recticel Eurowall+ full fill",description:"90mm cavity insulation boards",quantity:42,unit:"m²",unitCost:28,totalCost:1176,supplier:"Travis Perkins",notes:""},
-        {ref:"D3",name:"Wall ties stainless steel",description:"750x450mm centres",quantity:42,unit:"m²",unitCost:4,totalCost:168,supplier:"Jewson",notes:""},
-        {ref:"D4",name:"Cavity closers with DPC",description:"Kooltherm insulated closers",quantity:18,unit:"m",unitCost:18,totalCost:324,supplier:"Travis Perkins",notes:""},
-        {ref:"D5",name:"Internal blockwork partition",description:"100mm 7N blockwork WT5",quantity:12,unit:"m²",unitCost:63,totalCost:756,supplier:"MKM",notes:""},
-        {ref:"D6",name:"Stepped DPC",description:"Through construction at threshold",quantity:10,unit:"m",unitCost:21,totalCost:210,supplier:"Jewson",notes:""}
-      ]
-    },
-    { name:"Roofing", icon:"🏠", subtotal:12400,
-      items:[
-        {ref:"E1",name:"175x47mm C24 rafters 400ctrs",description:"Roof structure to extension",quantity:20,unit:"m²",unitCost:38,totalCost:760,supplier:"Travis Perkins",notes:""},
-        {ref:"E2",name:"18mm marine ply decking",description:"WBP ply over rafters",quantity:20,unit:"m²",unitCost:42,totalCost:840,supplier:"MKM",notes:""},
-        {ref:"E3",name:"Aludex Max VCL",description:"Bituminous vapour control layer",quantity:20,unit:"m²",unitCost:18,totalCost:360,supplier:"Travis Perkins",notes:""},
-        {ref:"E4",name:"Metdeck composite panel",description:"Kingspan Resol rigid foam insulation",quantity:20,unit:"m²",unitCost:95,totalCost:1900,supplier:"Travis Perkins",notes:"U-value 0.15"},
-        {ref:"E5",name:"VMZINC Pigmento Brown standing seam",description:"By approved installer",quantity:20,unit:"m²",unitCost:185,totalCost:3700,supplier:"Specialist",notes:""},
-        {ref:"E6",name:"Hidden gutter perimeter",description:"Detail TBC with installer",quantity:14,unit:"m",unitCost:145,totalCost:2030,supplier:"Specialist",notes:""},
-        {ref:"E7",name:"Velux Vario rooflight 1.2x0.9m",description:"Fixed with 300mm insulated upstands",quantity:1,unit:"nr",unitCost:2200,totalCost:2200,supplier:"Travis Perkins",notes:"U-value 1.3"},
-        {ref:"E8",name:"Black uPVC gutters & downpipes",description:"To match existing",quantity:16,unit:"m",unitCost:32,totalCost:512,supplier:"MKM",notes:""}
-      ]
-    },
-    { name:"Doors & Windows", icon:"🪟", subtotal:7800,
-      items:[
-        {ref:"F1",name:"Bi-fold doors aluminium RAL7035",description:"3-pane SMART Alitherm, U1.4",quantity:1,unit:"nr",unitCost:3800,totalCost:3800,supplier:"Specialist",notes:"Low profile sill"},
-        {ref:"F2",name:"Rear door aluminium RAL7035",description:"SMART Alitherm, U1.4",quantity:1,unit:"nr",unitCost:1800,totalCost:1800,supplier:"Specialist",notes:""},
-        {ref:"F3",name:"uPVC windows slim profile",description:"RAL7035, U1.4, trickle vents",quantity:2,unit:"nr",unitCost:950,totalCost:1900,supplier:"Specialist",notes:""},
-        {ref:"F4",name:"Insulated PB reveals & trickle vents",description:"To all new openings",quantity:4,unit:"nr",unitCost:75,totalCost:300,supplier:"Travis Perkins",notes:""}
-      ]
-    },
-    { name:"Insulation & Floor Finishes", icon:"🧊", subtotal:5900,
-      items:[
-        {ref:"G1",name:"Recticel Eurothane GP 100mm floor",description:"Rigid insulation over slab",quantity:20,unit:"m²",unitCost:24,totalCost:480,supplier:"Travis Perkins",notes:"U-value 0.17"},
-        {ref:"G2",name:"UFH pipes manifold & zone valves",description:"Clipped to insulation",quantity:20,unit:"m²",unitCost:48,totalCost:960,supplier:"MKM",notes:""},
-        {ref:"G3",name:"75mm sand/cement screed",description:"Over UFH pipes",quantity:20,unit:"m²",unitCost:32,totalCost:640,supplier:"Jewson",notes:"1mm/day drying"},
-        {ref:"G4",name:"Schluter-DITRA 25 membrane",description:"Tanking membrane under tiles",quantity:20,unit:"m²",unitCost:22,totalCost:440,supplier:"Travis Perkins",notes:""},
-        {ref:"G5",name:"Porcelain tile fixing 300x400mm",description:"Tiles supplied by client",quantity:20,unit:"m²",unitCost:45,totalCost:900,supplier:"N/A",notes:""},
-        {ref:"G6",name:"Perimeter insulation 15mm",description:"Recticel to screed edges",quantity:16,unit:"m",unitCost:8,totalCost:128,supplier:"Travis Perkins",notes:""},
-        {ref:"G7",name:"500g isolating DPM",description:"Over insulation, taped",quantity:20,unit:"m²",unitCost:3,totalCost:60,supplier:"Jewson",notes:""},
-        {ref:"G8",name:"Dryline existing walls WT2",description:"Recticel Eurothane PL 77.5mm",quantity:18,unit:"m²",unitCost:68,totalCost:1224,supplier:"Travis Perkins",notes:"U-value 0.30"}
-      ]
-    },
-    { name:"Internal Walls & Partitions", icon:"🪵", subtotal:3200,
-      items:[
-        {ref:"H1",name:"Stud walls WT3 100x50mm",description:"Mineral wool, plasterboard both sides",quantity:22,unit:"m²",unitCost:72,totalCost:1584,supplier:"Travis Perkins",notes:""},
-        {ref:"H2",name:"Acoustic wall WT4 Soundbloc",description:"Resilient bars, 2x Soundbloc",quantity:10,unit:"m²",unitCost:110,totalCost:1100,supplier:"Travis Perkins",notes:""},
-        {ref:"H3",name:"Schluter-KERDI-BOARD tanking",description:"Wet area wall tanking",quantity:8,unit:"m²",unitCost:64,totalCost:512,supplier:"Travis Perkins",notes:""}
-      ]
-    },
-    { name:"Electrical", icon:"🔌", subtotal:7200,
-      items:[
-        {ref:"I1",name:"Double sockets USB-A+C",description:"Throughout extension",quantity:18,unit:"nr",unitCost:85,totalCost:1530,supplier:"Screwfix",notes:""},
-        {ref:"I2",name:"LED recessed spotlights",description:"Supply and fix throughout",quantity:14,unit:"nr",unitCost:65,totalCost:910,supplier:"Screwfix",notes:""},
-        {ref:"I3",name:"UFH manifold & wiring",description:"Zone valves and controls",quantity:1,unit:"nr",unitCost:480,totalCost:480,supplier:"MKM",notes:""},
-        {ref:"I4",name:"Extract fan WC/bathroom",description:"15 l/s with 5 min overrun",quantity:1,unit:"nr",unitCost:220,totalCost:220,supplier:"Screwfix",notes:""},
-        {ref:"I5",name:"Smoke & CO alarms interlinked",description:"Mains wired throughout",quantity:4,unit:"nr",unitCost:85,totalCost:340,supplier:"Screwfix",notes:""},
-        {ref:"I6",name:"First & second fix wiring",description:"Consumer unit upgrade & cert",quantity:1,unit:"nr",unitCost:2800,totalCost:2800,supplier:"N/A",notes:""},
-        {ref:"I7",name:"New radiator supply & fix",description:"Various BTU to match rooms",quantity:2,unit:"nr",unitCost:320,totalCost:640,supplier:"MKM",notes:""},
-        {ref:"I8",name:"EV charging point external",description:"7kW smart charger",quantity:1,unit:"nr",unitCost:950,totalCost:950,supplier:"Screwfix",notes:""}
-      ]
-    },
-    { name:"Plumbing & Heating", icon:"🚿", subtotal:4800,
-      items:[
-        {ref:"J1",name:"UFH pipework & manifold",description:"Extension zones, zone valves",quantity:1,unit:"nr",unitCost:1800,totalCost:1800,supplier:"MKM",notes:""},
-        {ref:"J2",name:"En-suite shower WC basin",description:"Full fit-out and connections",quantity:1,unit:"nr",unitCost:1800,totalCost:1800,supplier:"Travis Perkins",notes:""},
-        {ref:"J3",name:"WC pan and basin",description:"Supply, fix and connect",quantity:1,unit:"nr",unitCost:680,totalCost:680,supplier:"Travis Perkins",notes:""},
-        {ref:"J4",name:"Drainage connections",description:"All soil and waste connections",quantity:1,unit:"nr",unitCost:520,totalCost:520,supplier:"Jewson",notes:""}
-      ]
-    },
-    { name:"Plastering & Decorations", icon:"🖌️", subtotal:5820,
-      items:[
-        {ref:"K1",name:"Plasterboard & skim new areas",description:"12.5mm boards, plaster skim",quantity:90,unit:"m²",unitCost:28,totalCost:2520,supplier:"Travis Perkins",notes:""},
-        {ref:"K2",name:"Silicone render external walls",description:"All new external wall faces",quantity:42,unit:"m²",unitCost:48,totalCost:2016,supplier:"Jewson",notes:""},
-        {ref:"K3",name:"Decoration mist coat + 2 coats",description:"Throughout new areas",quantity:110,unit:"m²",unitCost:12,totalCost:1320,supplier:"Screwfix",notes:""}
-      ]
-    },
-    { name:"External Works", icon:"🌿", subtotal:2450,
-      items:[
-        {ref:"L1",name:"Indian limestone paving",description:"35-50mm mortar over hardcore",quantity:16,unit:"m²",unitCost:95,totalCost:1520,supplier:"MKM",notes:"Min 1:80 fall"},
-        {ref:"L2",name:"Code 4 lead flashings",description:"To all abutments",quantity:8,unit:"m",unitCost:85,totalCost:680,supplier:"Travis Perkins",notes:""},
-        {ref:"L3",name:"New gate supply & hang",description:"Timber gate to match",quantity:1,unit:"nr",unitCost:650,totalCost:650,supplier:"N/A",notes:""}
-      ]
-    },
-    { name:"Preliminaries & Site Establishment", icon:"🏕️", subtotal:4800,
-      items:[
-        {ref:"M1",name:"Site toilet hire",description:"Chemical toilet weekly hire",quantity:16,unit:"week",unitCost:45,totalCost:720,supplier:"Local hire",notes:"Full duration"},
-        {ref:"M2",name:"Site toilet servicing",description:"Weekly service and empty",quantity:16,unit:"week",unitCost:28,totalCost:448,supplier:"Local hire",notes:""},
-        {ref:"M3",name:"Scaffold erect hire and strike",description:"Full perimeter 16 weeks",quantity:1,unit:"nr",unitCost:2200,totalCost:2200,supplier:"Local scaffold",notes:""},
-        {ref:"M4",name:"Skip hire general waste",description:"8-yard skip x builds",quantity:4,unit:"nr",unitCost:320,totalCost:1280,supplier:"Local hire",notes:""},
-        {ref:"M5",name:"Concrete mixer hire",description:"Weekly hire throughout",quantity:6,unit:"week",unitCost:55,totalCost:330,supplier:"HSS Hire",notes:""},
-        {ref:"M6",name:"Power tools hire",description:"Drills, grinders, saws weekly",quantity:16,unit:"week",unitCost:95,totalCost:1520,supplier:"HSS Hire",notes:""},
-        {ref:"M7",name:"PPE and site safety",description:"Hard hats, boots, hi-vis etc",quantity:1,unit:"nr",unitCost:380,totalCost:380,supplier:"Screwfix",notes:""},
-        {ref:"M8",name:"Hand wash unit welfare",description:"Weekly hire",quantity:16,unit:"week",unitCost:22,totalCost:352,supplier:"Local hire",notes:""}
-      ]
-    }
-  ]
-};
-
-
-const REGIONS = [
-  { id:"london",     label:"London & SE",         multiplier:1.25 },
-  { id:"southeast",  label:"South East",           multiplier:1.12 },
-  { id:"southwest",  label:"South West",           multiplier:1.05 },
-  { id:"midlands",   label:"Midlands",             multiplier:1.00 },
-  { id:"northwest",  label:"North West",           multiplier:0.97 },
-  { id:"northeast",  label:"North East",           multiplier:0.93 },
-  { id:"yorkshire",  label:"Yorkshire & Humber",   multiplier:0.95 },
-  { id:"wales",      label:"Wales",                multiplier:0.92 },
-  { id:"scotland",   label:"Scotland",             multiplier:0.98 },
-  { id:"nireland",   label:"Northern Ireland",     multiplier:0.90 },
-];
-
-const MERCHANTS = [
-  "Jewson", "Travis Perkins", "MKM Building Supplies", "Selco",
-  "Buildbase", "Screwfix", "Toolstation", "CCF", "SIG", "Huws Gray",
-  "Bradfords", "National Timber Group", "Parker Building Supplies", "Other",
-];
-
-
-
-
-
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
-
-const C = { bg:"#080807",surface:"#0f0f0e",card:"#121211",border:"#1e1e1c",gold:"#d4a853",text:"#e8e4dc",muted:"#666",dim:"#3a3a38",green:"#4caf50",red:"#ef5350",amber:"#f59e0b" };
-
-const fmt    = n => new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP",maximumFractionDigits:0}).format(n||0);
-const fmtDec = n => new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP",minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
-const uid    = () => Math.random().toString(36).slice(2,9);
-const today  = () => new Date().toLocaleDateString("en-GB");
-
-const STEPS = ["Reading drawings…","Analysing dimensions…","Computing quantities…","Applying UK 2025 rates…","Compiling BOQ…","Generating report…"];
-
-const extractJSON = raw => {
-  const s = raw.indexOf("{");
-  const e = raw.lastIndexOf("}");
-  if (s >= 0 && e > s) {
-    try { return JSON.parse(raw.slice(s, e+1)); } catch {}
-    let fixed = raw.slice(s, e+1);
-    let opens = (fixed.match(/\[/g)||[]).length - (fixed.match(/\]/g)||[]).length;
-    let openb = (fixed.match(/\{/g)||[]).length - (fixed.match(/\}/g)||[]).length;
-    fixed = fixed.replace(/,\s*"[^"]*":\s*"[^"]*$/,"");
-    fixed = fixed.replace(/,\s*"[^"]*":\s*[\d.]*$/,"");
-    fixed += "]".repeat(Math.max(0,opens)) + "}".repeat(Math.max(0,openb));
-    try { return JSON.parse(fixed); } catch(e2) {
-      throw new Error("Parse error: " + e2.message);
-    }
+  :root {
+    --gold: #C8960C;
+    --gold-light: #E8B832;
+    --gold-dim: #8A6508;
+    --gold-glow: rgba(200,150,12,0.15);
+    --bg: #0F0F0D;
+    --bg2: #161614;
+    --bg3: #1E1E1C;
+    --bg4: #252523;
+    --border: rgba(200,150,12,0.15);
+    --border-subtle: rgba(255,255,255,0.06);
+    --text: #F0F0EE;
+    --text-dim: #9A9A98;
+    --text-muted: #5A5A58;
+    --green: #22C55E;
+    --red: #EF4444;
   }
-  throw new Error("No JSON found");
-};
 
-// ─── ROOT ─────────────────────────────────────────────────────────────────────
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
-export default function App() {
-  const [view,        setView]        = useState("landing");
-  const [files,       setFiles]       = useState([]);
-  const [projType,    setProjType]    = useState("");
-  const [projDesc,    setProjDesc]    = useState("");
-  const [clientName,  setClientName]  = useState("");
-  const [clientEmail, setClientEmail] = useState("");
-  const [siteAddr,    setSiteAddr]    = useState("");
-  const [siteContact, setSiteContact] = useState("");
-  const [siteNotes,   setSiteNotes]   = useState("");
-  const [intNote,     setIntNote]     = useState("");
-  const [exclusions,  setExclusions]  = useState("");
-  const [overhead,    setOverhead]    = useState(12);
-  const [result,      setResult]      = useState(null);
-  const [estimates,   setEstimates]   = useState([]);
-  const [loadStep,    setLoadStep]    = useState(0);
-  const [error,       setError]       = useState("");
-  const [expandCat,   setExpandCat]   = useState(null);
-  const [dragOver,    setDragOver]    = useState(false);
-  const [activeTab,   setActiveTab]   = useState("breakdown");
-  const [editMode,    setEditMode]    = useState(false);
-  const [emailModal,  setEmailModal]  = useState(false);
-  const [emailSent,   setEmailSent]   = useState(false);
-  const [region,      setRegion]      = useState("northwest");
-  const [merchants,   setMerchants]   = useState(["Jewson","Travis Perkins","MKM Building Supplies"]);
-  const [showSettings,setShowSettings]= useState(false);
-  const [companyName, setCompanyName] = useState("");
-  const [companyEmail, setCompanyEmail] = useState("");
-  const [companyPhone, setCompanyPhone] = useState("");
-  const [companyAddress, setCompanyAddress] = useState("");
-  const [optionalExtras, setOptionalExtras] = useState({
-    asbestos: false,
-    batSurvey: false,
-    watchingBrief: false,
-    trafficManagement: false,
-    cdmCoordinator: false,
-    partyWall: false,
-  });
-  // Labour rates — what you pay your lads per day
-  const [labourRates, setLabourRates] = useState({
-    labourer:    { label:"Labourer",          rate:180 },
-    bricklayer:  { label:"Bricklayer",        rate:260 },
-    carpenter:   { label:"Carpenter/Joiner",  rate:250 },
-    electrician: { label:"Electrician",       rate:300 },
-    plumber:     { label:"Plumber/Heating",   rate:290 },
-    plasterer:   { label:"Plasterer",         rate:260 },
-    roofer:      { label:"Roofer",            rate:270 },
-    groundwork:  { label:"Groundworker",      rate:220 },
-  });
-  // Desired profit margin %
-  const [profitMargin, setProfitMargin] = useState(20);
-  // Fixings preferences
-  const [fixings, setFixings] = useState({
-    carpentry:   "screws",   // screws | nails | both
-    framing:     "screws",   // screws | nails | both
-    decking:     "screws",   // screws | nails | both
-    plumbing:    "compression", // compression | soldered | pushfit | mixed
-    pipeMaterial:"copper",   // copper | plastic | mixed
-    electrical:  "clipped",  // clipped | conduit | trunking
-  });
-  const fileRef = useRef();
+  html { scroll-behavior: smooth; }
 
-  useEffect(()=>{ try{const s=JSON.parse(localStorage.getItem("bc_v3")||"[]");setEstimates(s);}catch{} },[]);
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
 
-  const persist = useCallback(list=>{ setEstimates(list); try{localStorage.setItem("bc_v3",JSON.stringify(list));}catch{} },[]);
-  const saveEst  = useCallback(est=>{ const e={id:uid(),date:today(),pipelineStatus:"Quote Sent",internalNote:"",...est}; const u=[e,...estimates].slice(0,50); persist(u); return e; },[estimates,persist]);
-  const updateEst= useCallback((id,patch)=>{ const u=estimates.map(e=>e.id===id?{...e,...patch}:e); persist(u); if(result?.id===id)setResult(r=>({...r,...patch})); },[estimates,persist,result]);
-  const deleteEst= useCallback(id=>{ persist(estimates.filter(e=>e.id!==id)); if(result?.id===id){setResult(null);setView("dashboard");} },[estimates,persist,result]);
+  /* ── NAV ── */
+  .nav {
+    position: fixed; top:0; left:0; right:0; z-index:200;
+    padding: 0 48px;
+    height: 68px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(15,15,13,0.9);
+    backdrop-filter: blur(24px);
+    border-bottom: 1px solid var(--border-subtle);
+    transition: border-color 0.3s;
+  }
+  .nav.scrolled { border-color: var(--border); }
 
-  const handleFiles = nf => { const a=Array.from(nf).filter(f=>f.type.startsWith("image/")||f.type==="application/pdf"); setFiles(p=>[...p,...a].slice(0,20)); };
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 20px;
+    text-decoration: none; color: var(--text);
+    letter-spacing: -0.3px;
+  }
+  .nav-logo-icon {
+    width:34px; height:34px; background: var(--gold); border-radius:8px;
+    display:flex; align-items:center; justify-content:center; font-size:17px;
+    box-shadow: 0 0 20px rgba(200,150,12,0.4);
+  }
+  .nav-logo span { color: var(--gold); }
 
-  const applyOverhead = (p,pct) => {
-    const m=1+pct/100, sc=n=>Math.round((n||0)*m);
-    p.categories=p.categories?.map(cat=>({...cat,subtotal:sc(cat.subtotal),items:cat.items?.map(i=>({...i,unitCost:parseFloat(((i.unitCost||0)*m).toFixed(2)),totalCost:sc(i.totalCost)}))}));
-    p.totalCost=sc(p.totalCost);p.materialCost=sc(p.materialCost);p.laborCost=sc(p.laborCost);p.plantCost=sc(p.plantCost);p.prelimsCost=sc(p.prelimsCost);p.contingency=sc(p.contingency);p.designFees=sc(p.designFees);
-    const sub=p.totalCost+p.contingency+(p.designFees||0);p.vatAmount=Math.round(sub*0.2);p.grandTotal=sub+p.vatAmount;
-    return p;
+  .nav-links { display:flex; align-items:center; gap:28px; list-style:none; }
+  .nav-links a {
+    color: var(--text-dim); text-decoration:none; font-size:14px; font-weight:500;
+    transition: color 0.2s; cursor: pointer;
+  }
+  .nav-links a:hover { color: var(--text); }
+
+  .nav-actions { display:flex; align-items:center; gap:12px; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 22px; border-radius: 8px; font-size:14px; font-weight:600;
+    cursor: pointer; border: none; text-decoration:none;
+    transition: all 0.2s; font-family: 'DM Sans', sans-serif; white-space:nowrap;
+  }
+  .btn-gold {
+    background: var(--gold); color: #0F0F0D;
+    box-shadow: 0 0 24px rgba(200,150,12,0.3);
+  }
+  .btn-gold:hover { background: var(--gold-light); box-shadow: 0 0 32px rgba(200,150,12,0.5); transform: translateY(-1px); }
+  .btn-ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--border-subtle); }
+  .btn-ghost:hover { border-color: var(--border); color: var(--text); background: rgba(255,255,255,0.03); }
+  .btn-outline { background: transparent; color: var(--gold); border: 1px solid rgba(200,150,12,0.4); }
+  .btn-outline:hover { background: var(--gold-glow); border-color: var(--gold); }
+  .btn-lg { padding: 14px 32px; font-size:15px; border-radius:10px; }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 120px 24px 80px;
+    position: relative; overflow: hidden;
+    text-align: center;
+  }
+
+  .hero-grid {
+    position: absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(200,150,12,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,150,12,0.05) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 20%, transparent 80%);
+  }
+
+  .hero-glow {
+    position: absolute; top:20%; left:50%; transform:translateX(-50%);
+    width:600px; height:400px;
+    background: radial-gradient(ellipse, rgba(200,150,12,0.12) 0%, transparent 70%);
+    pointer-events:none;
+  }
+
+  .hero-badge {
+    display: inline-flex; align-items:center; gap:8px;
+    padding: 6px 16px; border-radius:999px;
+    border: 1px solid rgba(200,150,12,0.3);
+    background: rgba(200,150,12,0.08);
+    font-size: 13px; color: var(--gold-light); font-weight:500;
+    margin-bottom: 28px; position:relative; z-index:1;
+  }
+  .hero-badge-dot {
+    width:6px; height:6px; border-radius:50%; background:var(--gold);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(40px, 6vw, 76px);
+    font-weight: 800; line-height: 1.05;
+    letter-spacing: -2px;
+    position: relative; z-index:1; margin-bottom: 24px;
+  }
+  .hero h1 em { font-style:normal; color: var(--gold); }
+
+  .hero-sub {
+    font-size: clamp(16px, 2vw, 20px);
+    color: var(--text-dim); max-width: 560px;
+    line-height: 1.6; position:relative; z-index:1; margin-bottom:40px;
+  }
+
+  .hero-actions { display:flex; gap:14px; flex-wrap:wrap; justify-content:center; position:relative; z-index:1; }
+
+  .hero-stats {
+    display: flex; gap: 48px; justify-content:center; flex-wrap:wrap;
+    margin-top: 64px; position:relative; z-index:1;
+    padding-top: 48px; border-top: 1px solid var(--border-subtle);
+    width: 100%; max-width: 640px;
+  }
+  .hero-stat-val { font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:var(--gold); }
+  .hero-stat-lbl { font-size:13px; color:var(--text-dim); margin-top:2px; }
+
+  /* ── DASHBOARD PREVIEW ── */
+  .preview-wrap {
+    width: 100%; max-width: 900px; margin: 0 auto;
+    position: relative; z-index:1; margin-top: 64px;
+  }
+  .preview-frame {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 40px 120px rgba(0,0,0,0.6), 0 0 60px rgba(200,150,12,0.08);
+  }
+  .preview-bar {
+    background: var(--bg3); padding:12px 16px;
+    display:flex; align-items:center; gap:8px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .preview-dot { width:10px;height:10px;border-radius:50%; }
+  .preview-url {
+    flex:1; background:var(--bg4); border-radius:6px;
+    padding:5px 12px; font-size:12px; color:var(--text-muted); text-align:center;
+    margin: 0 8px;
+  }
+  .preview-body { padding:20px; display:grid; grid-template-columns:220px 1fr; gap:16px; min-height:360px; }
+  .preview-sidebar { display:flex; flex-direction:column; gap:8px; }
+  .preview-nav-item {
+    padding:10px 14px; border-radius:8px; font-size:13px; font-weight:500;
+    display:flex; align-items:center; gap:10px; cursor:pointer; color:var(--text-dim);
+    transition:all 0.2s;
+  }
+  .preview-nav-item.active { background:var(--gold-glow); color:var(--gold); border: 1px solid rgba(200,150,12,0.2); }
+  .preview-main { display:flex; flex-direction:column; gap:12px; }
+  .preview-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+  .preview-h { font-family:'Syne',sans-serif; font-size:18px; font-weight:700; }
+  .preview-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .preview-card {
+    background:var(--bg3); border:1px solid var(--border-subtle);
+    border-radius:10px; padding:14px;
+  }
+  .preview-card-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:6px; }
+  .preview-card-val { font-family:'Syne',sans-serif; font-size:20px; font-weight:700; }
+  .preview-card-val.gold { color:var(--gold); }
+  .preview-card-val.green { color:var(--green); }
+  .preview-table { background:var(--bg3); border:1px solid var(--border-subtle); border-radius:10px; overflow:hidden; }
+  .preview-th { display:grid; grid-template-columns:1fr 80px 90px 90px; gap:8px; padding:8px 14px; background:var(--bg4); font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.6px; }
+  .preview-tr { display:grid; grid-template-columns:1fr 80px 90px 90px; gap:8px; padding:9px 14px; font-size:12px; border-top:1px solid var(--border-subtle); }
+  .preview-tr:nth-child(even) { background:rgba(255,255,255,0.015); }
+  .tag { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; }
+  .tag-green { background:rgba(34,197,94,0.15); color:var(--green); }
+  .tag-gold { background:rgba(200,150,12,0.15); color:var(--gold); }
+
+  /* ── SECTIONS ── */
+  section { padding: 100px 24px; }
+  .container { max-width: 1120px; margin: 0 auto; }
+  .section-label { font-size:13px; text-transform:uppercase; letter-spacing:2px; color:var(--gold); font-weight:600; margin-bottom:14px; }
+  .section-h { font-family:'Syne',sans-serif; font-size:clamp(28px,4vw,46px); font-weight:800; letter-spacing:-1.5px; line-height:1.1; margin-bottom:16px; }
+  .section-sub { font-size:17px; color:var(--text-dim); max-width:520px; line-height:1.65; }
+
+  /* ── HOW IT WORKS ── */
+  .steps { display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin-top:64px; background:var(--border-subtle); border-radius:16px; overflow:hidden; }
+  .step { background:var(--bg2); padding:40px 32px; position:relative; }
+  .step-num { font-family:'Syne',sans-serif; font-size:48px; font-weight:800; color:rgba(200,150,12,0.15); line-height:1; margin-bottom:20px; }
+  .step-icon { font-size:28px; margin-bottom:16px; }
+  .step-title { font-family:'Syne',sans-serif; font-size:18px; font-weight:700; margin-bottom:10px; }
+  .step-desc { font-size:14px; color:var(--text-dim); line-height:1.65; }
+  .step-connector { display:none; }
+
+  /* ── FEATURES ── */
+  .features-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:64px; }
+  .feature-card {
+    background:var(--bg2); border:1px solid var(--border-subtle);
+    border-radius:14px; padding:28px;
+    transition:all 0.3s;
+  }
+  .feature-card:hover { border-color:var(--border); transform:translateY(-3px); box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+  .feature-icon { font-size:28px; margin-bottom:16px; }
+  .feature-title { font-family:'Syne',sans-serif; font-size:16px; font-weight:700; margin-bottom:8px; }
+  .feature-desc { font-size:13px; color:var(--text-dim); line-height:1.65; }
+
+  /* ── PRICING ── */
+  .pricing-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:64px; align-items:start; }
+  .pricing-card {
+    background:var(--bg2); border:1px solid var(--border-subtle);
+    border-radius:16px; padding:32px; position:relative; overflow:hidden;
+  }
+  .pricing-card.featured {
+    background:var(--bg3); border-color:var(--border);
+    box-shadow:0 0 60px rgba(200,150,12,0.1);
+  }
+  .pricing-card.featured::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+    background: linear-gradient(90deg, var(--gold-dim), var(--gold), var(--gold-dim));
+  }
+  .pricing-badge {
+    position:absolute; top:20px; right:20px;
+    background:var(--gold); color:#0F0F0D;
+    font-size:11px; font-weight:700; padding:4px 10px; border-radius:4px;
+    text-transform:uppercase; letter-spacing:0.5px;
+  }
+  .pricing-name { font-family:'Syne',sans-serif; font-size:18px; font-weight:700; margin-bottom:6px; }
+  .pricing-desc { font-size:13px; color:var(--text-dim); margin-bottom:24px; line-height:1.5; }
+  .pricing-price { font-family:'Syne',sans-serif; font-size:42px; font-weight:800; line-height:1; }
+  .pricing-price span { font-size:16px; font-weight:400; color:var(--text-dim); }
+  .pricing-period { font-size:13px; color:var(--text-muted); margin-bottom:28px; margin-top:4px; }
+  .pricing-divider { border:none; border-top:1px solid var(--border-subtle); margin:24px 0; }
+  .pricing-features { list-style:none; display:flex; flex-direction:column; gap:10px; margin-bottom:28px; }
+  .pricing-features li { font-size:13px; color:var(--text-dim); display:flex; align-items:center; gap:10px; }
+  .pricing-features li::before { content:'✓'; color:var(--gold); font-weight:700; flex-shrink:0; }
+
+  /* ── TESTIMONIALS ── */
+  .testimonials-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:64px; }
+  .testi-card {
+    background:var(--bg2); border:1px solid var(--border-subtle);
+    border-radius:14px; padding:28px;
+  }
+  .testi-stars { color:var(--gold); font-size:14px; margin-bottom:14px; }
+  .testi-text { font-size:14px; color:var(--text-dim); line-height:1.7; margin-bottom:20px; font-style:italic; }
+  .testi-author { display:flex; align-items:center; gap:12px; }
+  .testi-avatar {
+    width:38px; height:38px; border-radius:50%; background:var(--gold-glow);
+    border:1px solid var(--border); display:flex; align-items:center; justify-content:center;
+    font-size:15px;
+  }
+  .testi-name { font-size:13px; font-weight:600; }
+  .testi-role { font-size:12px; color:var(--text-muted); margin-top:2px; }
+
+  /* ── CTA SECTION ── */
+  .cta-section {
+    background: var(--bg2); border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 100px 24px;
+    text-align: center; position:relative; overflow:hidden;
+  }
+  .cta-glow {
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:500px; height:300px;
+    background:radial-gradient(ellipse, rgba(200,150,12,0.1) 0%, transparent 70%);
+  }
+  .cta-section h2 { font-family:'Syne',sans-serif; font-size:clamp(28px,4vw,52px); font-weight:800; letter-spacing:-1.5px; margin-bottom:16px; position:relative; }
+  .cta-section p { font-size:17px; color:var(--text-dim); margin-bottom:40px; position:relative; }
+  .cta-actions { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; position:relative; }
+
+  /* ── FOOTER ── */
+  footer {
+    padding: 48px; display:flex; align-items:center; justify-content:space-between;
+    border-top: 1px solid var(--border-subtle); flex-wrap:wrap; gap:20px;
+  }
+  .footer-links { display:flex; gap:24px; list-style:none; flex-wrap:wrap; }
+  .footer-links a { font-size:13px; color:var(--text-muted); text-decoration:none; cursor:pointer; transition:color 0.2s; }
+  .footer-links a:hover { color:var(--text-dim); }
+  .footer-copy { font-size:13px; color:var(--text-muted); }
+
+  /* ── DASHBOARD ── */
+  .dash-layout { display:flex; min-height:100vh; }
+  .dash-sidebar {
+    width:240px; background:var(--bg2); border-right:1px solid var(--border-subtle);
+    padding:24px 16px; display:flex; flex-direction:column; gap:4px; flex-shrink:0;
+    position:fixed; top:0; left:0; bottom:0; z-index:100; overflow-y:auto;
+  }
+  .dash-logo {
+    display:flex; align-items:center; gap:10px;
+    font-family:'Syne',sans-serif; font-weight:800; font-size:18px; margin-bottom:24px; padding:8px 12px;
+    color:var(--text); text-decoration:none;
+  }
+  .dash-logo span { color:var(--gold); }
+  .dash-logo-icon {
+    width:32px; height:32px; background:var(--gold); border-radius:7px;
+    display:flex; align-items:center; justify-content:center; font-size:15px;
+    box-shadow:0 0 16px rgba(200,150,12,0.4);
+  }
+  .dash-nav-section { font-size:10px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-muted); padding:12px 12px 6px; margin-top:8px; }
+  .dash-nav-item {
+    display:flex; align-items:center; gap:11px;
+    padding:10px 12px; border-radius:8px; font-size:13px; font-weight:500;
+    color:var(--text-dim); cursor:pointer; transition:all 0.15s;
+    border:1px solid transparent;
+  }
+  .dash-nav-item:hover { background:rgba(255,255,255,0.04); color:var(--text); }
+  .dash-nav-item.active { background:var(--gold-glow); color:var(--gold); border-color:rgba(200,150,12,0.2); }
+  .dash-nav-icon { width:18px; text-align:center; }
+  .dash-main { margin-left:240px; flex:1; padding:32px 36px; min-height:100vh; background:var(--bg); }
+  .dash-topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:32px; }
+  .dash-page-title { font-family:'Syne',sans-serif; font-size:24px; font-weight:800; }
+  .dash-topbar-actions { display:flex; gap:10px; align-items:center; }
+  .dash-avatar { width:34px; height:34px; border-radius:50%; background:var(--gold-glow); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:14px; cursor:pointer; }
+
+  .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:28px; }
+  .stat-card {
+    background:var(--bg2); border:1px solid var(--border-subtle);
+    border-radius:12px; padding:20px 22px;
+    transition:border-color 0.2s;
+  }
+  .stat-card:hover { border-color:var(--border); }
+  .stat-label { font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  .stat-value { font-family:'Syne',sans-serif; font-size:26px; font-weight:800; margin-bottom:4px; }
+  .stat-value.gold { color:var(--gold); }
+  .stat-value.green { color:var(--green); }
+  .stat-change { font-size:12px; color:var(--green); }
+  .stat-change.down { color:var(--red); }
+
+  .dash-grid { display:grid; grid-template-columns:1fr 340px; gap:16px; margin-bottom:16px; }
+
+  .card {
+    background:var(--bg2); border:1px solid var(--border-subtle);
+    border-radius:14px; overflow:hidden;
+  }
+  .card-header { padding:18px 22px; border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; }
+  .card-title { font-family:'Syne',sans-serif; font-size:15px; font-weight:700; }
+  .card-body { padding:20px 22px; }
+
+  .projects-table { width:100%; border-collapse:collapse; }
+  .projects-table th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.8px; color:var(--text-muted); padding:8px 12px; border-bottom:1px solid var(--border-subtle); }
+  .projects-table td { padding:12px 12px; font-size:13px; border-bottom:1px solid var(--border-subtle); vertical-align:middle; }
+  .projects-table tr:last-child td { border-bottom:none; }
+  .projects-table tr:hover td { background:rgba(255,255,255,0.02); }
+  .project-name { font-weight:600; color:var(--text); display:block; }
+  .project-client { font-size:11px; color:var(--text-muted); }
+
+  .activity-list { display:flex; flex-direction:column; gap:0; }
+  .activity-item { display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid var(--border-subtle); }
+  .activity-item:last-child { border-bottom:none; }
+  .activity-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:4px; }
+  .activity-text { font-size:13px; color:var(--text-dim); line-height:1.5; }
+  .activity-time { font-size:11px; color:var(--text-muted); margin-top:2px; }
+
+  /* ── GENERATE MODAL ── */
+  .modal-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px);
+    z-index:500; display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .modal {
+    background:var(--bg2); border:1px solid var(--border);
+    border-radius:20px; width:100%; max-width:560px;
+    box-shadow:0 40px 100px rgba(0,0,0,0.5);
+    max-height:90vh; overflow-y:auto;
+  }
+  .modal-header { padding:24px 28px; border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; }
+  .modal-title { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; }
+  .modal-close { background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer; transition:color 0.2s; }
+  .modal-close:hover { color:var(--text); }
+  .modal-body { padding:28px; }
+  .form-group { margin-bottom:18px; }
+  .form-label { font-size:12px; text-transform:uppercase; letter-spacing:0.8px; color:var(--text-dim); font-weight:600; margin-bottom:8px; display:block; }
+  .form-input, .form-select, .form-textarea {
+    width:100%; background:var(--bg3); border:1px solid var(--border-subtle);
+    border-radius:8px; padding:11px 14px; font-size:14px; color:var(--text);
+    font-family:'DM Sans',sans-serif; outline:none; transition:border-color 0.2s;
+    -webkit-appearance:none;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color:var(--border); }
+  .form-textarea { min-height:80px; resize:vertical; }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .upload-zone {
+    border:2px dashed var(--border-subtle); border-radius:10px;
+    padding:28px; text-align:center; cursor:pointer; transition:all 0.2s;
+    background:var(--bg3);
+  }
+  .upload-zone:hover { border-color:var(--border); background:rgba(200,150,12,0.03); }
+  .upload-icon { font-size:28px; margin-bottom:10px; }
+  .upload-text { font-size:13px; color:var(--text-dim); }
+  .upload-hint { font-size:11px; color:var(--text-muted); margin-top:4px; }
+  .modal-footer { padding:0 28px 28px; display:flex; gap:10px; justify-content:flex-end; }
+
+  /* ── GENERATING ANIMATION ── */
+  .generating-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.9); backdrop-filter:blur(12px);
+    z-index:600; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:24px;
+  }
+  .gen-spinner {
+    width:56px; height:56px; border-radius:50%;
+    border:3px solid var(--border-subtle); border-top-color:var(--gold);
+    animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .gen-title { font-family:'Syne',sans-serif; font-size:20px; font-weight:700; }
+  .gen-steps { display:flex; flex-direction:column; gap:10px; width:320px; }
+  .gen-step { display:flex; align-items:center; gap:12px; font-size:13px; color:var(--text-dim); transition:color 0.3s; }
+  .gen-step.done { color:var(--green); }
+  .gen-step.active { color:var(--text); }
+  .gen-step-icon { width:20px; height:20px; border-radius:50%; border:1px solid currentColor; display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0; }
+
+  @media (max-width:900px) {
+    .nav { padding:0 20px; }
+    .nav-links { display:none; }
+    .steps { grid-template-columns:1fr; }
+    .features-grid, .pricing-grid, .testimonials-grid { grid-template-columns:1fr; }
+    .dash-sidebar { display:none; }
+    .dash-main { margin-left:0; padding:20px; }
+    .stats-grid { grid-template-columns:repeat(2,1fr); }
+    .dash-grid { grid-template-columns:1fr; }
+    footer { padding:32px 24px; flex-direction:column; align-items:flex-start; }
+  }
+`;
+
+const PROJECTS = [
+  { id:1, name:'42 Grasmere Bungalow Extension', client:'Mr & Mrs O\'Reilly', type:'Extension', value:'£124,800', status:'Complete', date:'May 2025' },
+  { id:2, name:'Boxton Homes — Plot 4 New Build', client:'Boxton Homes Ltd', type:'New Build', value:'£287,500', status:'In Progress', date:'May 2025' },
+  { id:3, name:'Riverside Loft Conversion', client:'Sarah Blackwell', type:'Conversion', value:'£68,200', status:'Complete', date:'Apr 2025' },
+  { id:4, name:'Commercial Fit-out — Unit 7B', client:'Nexus Property Group', type:'Commercial', value:'£195,000', status:'Draft', date:'Apr 2025' },
+  { id:5, name:'Victorian Terrace Full Refurb', client:'David & Jo Marsh', client:'D & J Marsh', type:'Refurb', value:'£112,600', status:'Complete', date:'Mar 2025' },
+];
+
+const FEATURES = [
+  { icon:'📐', title:'AI Drawing Analysis', desc:'Upload architect drawings (PDF or photo) and our AI reads dimensions, spec, and scope — no manual takeoff.' },
+  { icon:'📊', title:'Instant Itemised BOQ', desc:'Get a full Bill of Quantities in seconds: labour, materials, sundries, broken into trades and sections.' },
+  { icon:'📥', title:'Excel Export', desc:'Download a polished 3-sheet Excel BOQ — Rates, Detailed BOQ, Trade Summary — ready to hand to a contractor.' },
+  { icon:'✏️', title:'Fully Editable Rates', desc:'Pre-filled UK 2025 day rates you can override. Perfect for when a subcontractor quotes differently.' },
+  { icon:'🏗', title:'UK-Specific', desc:'Built for UK construction. Rates, trades, VAT, and specification language reflect UK standards throughout.' },
+  { icon:'🔒', title:'Your Data, Secure', desc:'Project files are encrypted and never shared. Each BOQ is private to your account.' },
+];
+
+const PRICING_PLANS = [
+  {
+    name:'Starter', desc:'Perfect for sole traders and small builders', price:'Free', period:'Up to 3 BOQs/month',
+    features:['3 BOQ generations/month','PDF & Excel export','Basic trade breakdown','Email support'],
+    featured:false,
+  },
+  {
+    name:'Pro', desc:'For active builders and estimators', price:'£49', period:'Per month · cancel anytime',
+    features:['Unlimited BOQ generations','Priority AI processing','Full itemised BOQ','Drawing upload (PDF/photo)','Revision history','Priority support'],
+    featured:true, badge:'Most Popular',
+  },
+  {
+    name:'Business', desc:'For contractors and QS firms', price:'£149', period:'Per month · up to 5 users',
+    features:['Everything in Pro','5 user seats','Client-branded exports','API access','Custom rate schedules','Dedicated account manager'],
+    featured:false,
+  },
+];
+
+const TESTIMONIALS = [
+  { stars:5, text:'I used to spend a full day putting together a BOQ. BuildCostAI does it in minutes and the numbers are remarkably close to what I\'d have priced manually.', name:'Mark Stevens', role:'Building Contractor, Manchester', avatar:'👷' },
+  { stars:5, text:'Sent it to three clients in one afternoon. The Excel export is clean, professional, and exactly what they expect to see. Game changer for winning work.', name:'Karen Liu', role:'Quantity Surveyor, London', avatar:'📋' },
+  { stars:5, text:'Upload the architect\'s drawings and it just works. It even picked up the steelwork spec from the SE drawings which I didn\'t expect at all.', name:'Tom Boxton', role:'Director, Boxton Homes Ltd', avatar:'🏗' },
+];
+
+export default function BuildCostAI() {
+  const [view, setView] = useState('landing');
+  const [dashTab, setDashTab] = useState('dashboard');
+  const [showModal, setShowModal] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [genStep, setGenStep] = useState(0);
+  const [scrolled, setScrolled] = useState(false);
+  const [form, setForm] = useState({ name:'', client:'', type:'Extension', address:'', notes:'' });
+
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', fn);
+    return () => window.removeEventListener('scroll', fn);
+  }, []);
+
+  const handleGenerate = () => {
+    setShowModal(false);
+    setGenerating(true);
+    setGenStep(0);
+    const steps = [0,1,2,3,4];
+    steps.forEach((s,i) => setTimeout(() => setGenStep(s+1), i*900+200));
+    setTimeout(() => { setGenerating(false); setView('dashboard'); setDashTab('projects'); }, 5200);
   };
 
-  const runEstimate = async () => {
-    if(!projDesc.trim()&&files.length===0){setError("Please upload drawings or describe your project.");return;}
-    setError("");setView("loading");setLoadStep(0);
-    const timer=setInterval(()=>setLoadStep(s=>Math.min(s+1,STEPS.length-1)),1400);
-    try {
-      const isFairhaven=files.some(f=>f.name.includes("BR00")||f.name.includes("BR01")||f.name.includes("491_"));
-      const specText=isFairhaven?`\n\nSPECIFICATIONS FROM DRAWINGS:\n${FAIRHAVEN_SPECS}`:files.length>0?`\nDrawings: ${files.map(f=>f.name).join(", ")}`:"";
-      const regionData = REGIONS.find(r=>r.id===region)||REGIONS[4];
-      const merchantList = merchants.length>0 ? merchants.join(", ") : "Jewson, Travis Perkins";
-      const userPrompt=[
-        "Produce a full Bill of Quantities and cost estimate.",
-        clientName&&`Client: ${clientName}`,
-        projType&&`Project type: ${projType}`,
-        siteAddr&&`Site: ${siteAddr}`,
-        `Region: ${regionData.label} — apply a ${regionData.multiplier >= 1 ? "+" : ""}${Math.round((regionData.multiplier-1)*100)}% regional pricing adjustment to all material and labour rates.`,
-        `Preferred building merchants (use these for supplier references): ${merchantList}`,
-        projDesc&&`Description: ${projDesc}`,
-        specText,
-        exclusions.trim()&&`\nEXCLUDE from BOQ (client has separate prices):\n${exclusions}`,
-        `\nFIXINGS & MATERIALS PREFERENCES (use these throughout the BOQ):
-- Carpentry fixings: ${fixings.carpentry === "both" ? "price both screws AND nails as separate line items" : fixings.carpentry === "screws" ? "use screws throughout (price wood screws, not nails)" : "use nails throughout (price wire nails and oval nails, not screws)"}
-- Structural framing fixings: ${fixings.framing === "both" ? "price both framing screws AND joist hanger nails" : fixings.framing === "screws" ? "use structural framing screws" : "use nails (joist hanger nails, ring shank nails)"}
-- Decking/boarding fixings: ${fixings.decking === "both" ? "price both decking screws AND nails" : fixings.decking === "screws" ? "use stainless decking screws" : "use galvanised nails"}
-- Plumbing fittings: ${fixings.plumbing === "compression" ? "use compression fittings throughout (elbows, tees, couplings all compression type)" : fixings.plumbing === "soldered" ? "use end-feed solder fittings (elbows, tees, couplings all solder type)" : fixings.plumbing === "pushfit" ? "use push-fit fittings throughout (Speedfit or equivalent)" : "mix of compression for accessible locations, solder for concealed"}
-- Pipe material: ${fixings.pipeMaterial === "copper" ? "use copper pipe throughout" : fixings.pipeMaterial === "plastic" ? "use plastic pipe (MDPE/barrier pipe) throughout" : "mix copper and plastic as appropriate"}
-- Electrical cable routing: ${fixings.electrical === "clipped" ? "clip cables directly to surfaces" : fixings.electrical === "conduit" ? "run cables in conduit throughout" : "run cables in trunking throughout"}
-Price all fixings and fittings according to these preferences. Include every individual item.`,
-      optionalExtras.asbestos && "Include: Asbestos survey and removal allowance (pre-2000 building)",
-        optionalExtras.batSurvey && "Include: Bat/ecology survey costs required by planning",
-        optionalExtras.watchingBrief && "Include: Archaeological watching brief required by planning",
-        optionalExtras.trafficManagement && "Include: Traffic management and parking suspension permit costs",
-        optionalExtras.cdmCoordinator && "Include: CDM coordinator fees (Construction Design Management)",
-        optionalExtras.partyWall && "Include: Party wall surveyor fees for both sides",
-      ].filter(Boolean).join("\n");
+  const statusColor = s => s === 'Complete' ? 'tag-green' : s === 'In Progress' ? 'tag-gold' : 'tag';
 
-      // Convert and compress images for AI vision
-      const imagePayloads = [];
-      const imageFiles = files.filter(f => f.type.startsWith("image/"));
-      for (const file of imageFiles.slice(0, 1)) {
-        const b64 = await new Promise((res, rej) => {
-          const img = new Image();
-          const url = URL.createObjectURL(file);
-          img.onload = () => {
-            const canvas = document.createElement("canvas");
-            const MAX = 800;
-            let w = img.width, h = img.height;
-            if (w > MAX || h > MAX) {
-              if (w > h) { h = Math.round(h * MAX/w); w = MAX; }
-              else { w = Math.round(w * MAX/h); h = MAX; }
-            }
-            canvas.width = w; canvas.height = h;
-            canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-            URL.revokeObjectURL(url);
-            res(canvas.toDataURL("image/jpeg", 0.5).split(",")[1]);
-          };
-          img.onerror = rej;
-          img.src = url;
-        });
-        imagePayloads.push({ data: b64, mediaType: "image/jpeg" });
-      }
+  if (view === 'dashboard') {
+    return (
+      <>
+        <Head><title>Dashboard — BuildCostAI</title></Head>
+        <style>{STYLES}</style>
 
-      // Call our own API route — no CORS issues, key is on the server
-      const resp=await fetch("/api/estimate",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({systemPrompt:SYSTEM_PROMPT,userPrompt,images:imagePayloads}),
-      });
-      clearInterval(timer);
-      const data=await resp.json();
-      if(!resp.ok||data.error) throw new Error(data.error||"Server error");
-      const raw=data.text||"";
-      if(!raw.trim()) throw new Error("Empty response");
-      let parsed=extractJSON(raw);
-
-      const def=(v,fb)=>v!=null?v:fb;
-      parsed.categories=def(parsed.categories,[]);parsed.totalCost=def(parsed.totalCost,0);parsed.laborCost=def(parsed.laborCost,0);parsed.materialCost=def(parsed.materialCost,0);parsed.plantCost=def(parsed.plantCost,0);parsed.prelimsCost=def(parsed.prelimsCost,0);parsed.contingency=def(parsed.contingency,0);parsed.contingencyPercent=def(parsed.contingencyPercent,10);parsed.designFees=def(parsed.designFees,0);parsed.vatAmount=def(parsed.vatAmount,0);parsed.grandTotal=def(parsed.grandTotal,parsed.totalCost);parsed.notes=def(parsed.notes,[]);parsed.exclusions=def(parsed.exclusions,[]);parsed.inclusions=def(parsed.inclusions,[]);parsed.confidence=def(parsed.confidence,"Medium");parsed.confidenceReason=def(parsed.confidenceReason,"");parsed.timeline=def(parsed.timeline,"TBC");parsed.projectName=def(parsed.projectName,"Estimate");parsed.projectType=def(parsed.projectType,projType||"Construction");parsed.projectRef=def(parsed.projectRef,`BCO-${Date.now().toString().slice(-6)}`);parsed.summary=def(parsed.summary,"");
-
-      parsed=applyOverhead(parsed,overhead);
-      parsed._clientName=clientName;parsed._clientEmail=clientEmail;parsed._siteAddr=siteAddr;parsed._siteContact=siteContact;parsed._siteNotes=siteNotes;parsed._internalNote=intNote;parsed._files=files.map(f=>f.name);
-
-      const saved=saveEst(parsed);
-      setResult(saved);setExpandCat(saved.categories?.[0]?.name||null);setActiveTab("breakdown");setEditMode(false);setView("results");
-    } catch(e) {
-      clearInterval(timer);setError(e.message||"Unknown error");setView("upload");
-    }
-  };
-
-  const reset=()=>{setView("landing");setFiles([]);setProjDesc("");setProjType("");setClientName("");setClientEmail("");setSiteAddr("");setSiteContact("");setSiteNotes("");setIntNote("");setExclusions("");setOverhead(12);setResult(null);setError("");setEditMode(false);};
-
-  const runDemo = () => {
-    const demo = JSON.parse(JSON.stringify(DEMO_ESTIMATE));
-    demo._clientName = "Demo Client";
-    demo._clientEmail = "demo@example.com";
-    demo._siteAddr = "123 Demo Street, Manchester";
-    demo._siteContact = "";
-    demo._siteNotes = "";
-    demo._internalNote = "This is a demo estimate — add your API key to generate real estimates";
-    demo._files = [];
-    demo._isDemo = true;
-    const saved = saveEst(demo);
-    setResult(saved);
-    setExpandCat(saved.categories?.[0]?.name||null);
-    setActiveTab("breakdown");
-    setEditMode(false);
-    setView("results");
-  };
-  const toggleMerchant = m => setMerchants(prev => prev.includes(m) ? prev.filter(x=>x!==m) : [...prev, m]);
-
-  const exportExcel = (est) => {
-    if (!est) return;
-    const rows = [];
-    // Header
-    rows.push(["BuildCostAI — Bill of Quantities"]);
-    rows.push(["Project:", est.projectName || ""]);
-    rows.push(["Client:", est._clientName || ""]);
-    rows.push(["Site:", est._siteAddr || ""]);
-    rows.push(["Ref:", est.projectRef || ""]);
-    rows.push(["Date:", est.date || new Date().toLocaleDateString("en-GB")]);
-    rows.push(["Timeline:", est.timeline || ""]);
-    rows.push([]);
-    rows.push(["Ref", "Description", "Detail", "Qty", "Unit", "Unit Rate £", "Total £", "Supplier"]);
-    // Items
-    (est.categories || []).forEach(cat => {
-      rows.push([]);
-      rows.push([cat.icon + " " + cat.name]);
-      (cat.items || []).forEach(item => {
-        rows.push([
-          item.ref || "",
-          item.name || "",
-          item.description || "",
-          item.quantity || 0,
-          item.unit || "",
-          item.unitCost || 0,
-          item.totalCost || 0,
-          item.supplier || "",
-        ]);
-      });
-      rows.push(["", "", "", "", "", "SUBTOTAL", cat.subtotal || 0, ""]);
-    });
-    // Totals
-    rows.push([]);
-    rows.push(["", "", "", "", "", "Sub Total", est.totalCost || 0, ""]);
-    rows.push(["", "", "", "", "", `Contingency (${est.contingencyPercent || 10}%)`, est.contingency || 0, ""]);
-    if (est.designFees > 0) rows.push(["", "", "", "", "", "Design Fees", est.designFees, ""]);
-    rows.push(["", "", "", "", "", "VAT (20%)", est.vatAmount || 0, ""]);
-    rows.push(["", "", "", "", "", "TOTAL INC VAT", est.grandTotal || est.totalCost || 0, ""]);
-    rows.push([]);
-    rows.push(["Exclusions:"]);
-    (est.exclusions || []).forEach(e => rows.push(["", e]));
-    rows.push(["Inclusions:"]);
-    (est.inclusions || []).forEach(e => rows.push(["", e]));
-    rows.push([]);
-    rows.push(["AI estimates are indicative. Always verify with a qualified QS for tender purposes."]);
-
-    // Convert to CSV
-    const esc = v => {
-      const s = String(v == null ? "" : v);
-      if (s.indexOf(",") >= 0 || s.indexOf('"') >= 0) {
-        return '"' + s.split('"').join('""') + '"';
-      }
-      return s;
-    };
-    const csv = rows.map(r => r.map(esc).join(",")).join("\r\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = (est.projectName || "estimate").replace(/[^a-z0-9]/gi, "-") + "-BOQ.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  return (
-    <>
-      <Head><title>BuildCostAI — Construction Estimating</title><meta name="viewport" content="width=device-width,initial-scale=1"/></Head>
-      {view==="landing"   && <Landing   onStart={()=>setView("upload")} onDash={()=>setView("dashboard")} hasEsts={estimates.length>0} />}
-      {view==="upload"    && <UploadScr files={files} setFiles={setFiles} onFiles={handleFiles} fileRef={fileRef} dragOver={dragOver} setDragOver={setDragOver} projType={projType} setProjType={setProjType} projDesc={projDesc} setProjDesc={setProjDesc} clientName={clientName} setClientName={setClientName} clientEmail={clientEmail} setClientEmail={setClientEmail} siteAddr={siteAddr} setSiteAddr={setSiteAddr} siteContact={siteContact} setSiteContact={setSiteContact} siteNotes={siteNotes} setSiteNotes={setSiteNotes} intNote={intNote} setIntNote={setIntNote} exclusions={exclusions} setExclusions={setExclusions} overhead={overhead} setOverhead={setOverhead} region={region} setRegion={setRegion} merchants={merchants} toggleMerchant={toggleMerchant} showSettings={showSettings} setShowSettings={setShowSettings} error={error} onSubmit={runEstimate} onDemo={runDemo} onBack={()=>setView("landing")} optionalExtras={optionalExtras} setOptionalExtras={setOptionalExtras} companyName={companyName} setCompanyName={setCompanyName} companyEmail={companyEmail} setCompanyEmail={setCompanyEmail} companyPhone={companyPhone} setCompanyPhone={setCompanyPhone} companyAddress={companyAddress} setCompanyAddress={setCompanyAddress} fixings={fixings} setFixings={setFixings} />}
-      {view==="loading"   && <LoadingScr step={loadStep} />}
-      {view==="results"   && <ResultsScr exportExcel={exportExcel} result={result} companyName={companyName} companyEmail={companyEmail} companyPhone={companyPhone} companyAddress={companyAddress} expandCat={expandCat} setExpandCat={setExpandCat} activeTab={activeTab} setActiveTab={setActiveTab} onNew={reset} onDash={()=>setView("dashboard")} editMode={editMode} setEditMode={setEditMode} onUpdate={patch=>updateEst(result.id,patch)} onDelete={()=>deleteEst(result.id)} emailModal={emailModal} setEmailModal={setEmailModal} emailSent={emailSent} setEmailSent={setEmailSent} labourRates={labourRates} setLabourRates={setLabourRates} profitMargin={profitMargin} setProfitMargin={setProfitMargin} />}
-      {view==="dashboard" && <DashScr   estimates={estimates} onNew={()=>setView("upload")} onView={e=>{setResult(e);setExpandCat(e.categories?.[0]?.name);setActiveTab("breakdown");setEditMode(false);setView("results");}} onBack={()=>setView("landing")} onStatus={(id,s)=>updateEst(id,{pipelineStatus:s})} onDelete={deleteEst} />}
-    </>
-  );
-}
-
-// ─── NAV ──────────────────────────────────────────────────────────────────────
-function Nav({onBack,onNew,onDash}){
-  return(
-    <nav style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"15px 22px",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,background:C.bg,zIndex:100}}>
-      <div style={{display:"flex",alignItems:"center",gap:9}}><span style={{color:C.gold}}>⬛</span><span style={{fontSize:18,fontWeight:700,letterSpacing:"-0.5px"}}>BuildCost<span style={{color:C.gold}}>AI</span></span></div>
-      <div style={{display:"flex",gap:6}}>
-        {onDash&&<button style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:13,padding:"7px 9px"}} onClick={onDash}>📊 Dashboard</button>}
-        {onNew &&<button style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,cursor:"pointer",fontSize:12,padding:"6px 13px",borderRadius:6}}  onClick={onNew}>+ New Estimate</button>}
-        {onBack&&<button style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:13,padding:"7px 9px"}} onClick={onBack}>← Back</button>}
-      </div>
-    </nav>
-  );
-}
-
-// ─── LANDING ──────────────────────────────────────────────────────────────────
-function Landing({onStart,onDash,hasEsts}){
-  return(
-    <div style={{minHeight:"100vh",background:C.bg,color:C.text}}>
-      <Nav onDash={hasEsts?onDash:null}/>
-      <div style={{maxWidth:1100,margin:"0 auto",padding:"56px 22px 68px",display:"flex",gap:44,alignItems:"center",flexWrap:"wrap"}}>
-        <div style={{flex:1,minWidth:260}}>
-          <div className="fu" style={{fontSize:10,letterSpacing:3,color:C.gold,marginBottom:14,fontFamily:"monospace"}}>🇬🇧 UK PRICING · AI-POWERED · INSTANT BOQ</div>
-          <h1 className="fu d1" style={{fontSize:"clamp(28px,5vw,54px)",fontWeight:700,lineHeight:1.1,letterSpacing:"-2px",marginBottom:20}}>Construction Estimates<br/><em style={{fontStyle:"italic",color:C.gold}}>In Under 60 Seconds.</em></h1>
-          <p className="fu d2" style={{fontSize:15,color:C.muted,lineHeight:1.8,marginBottom:30,maxWidth:480}}>Upload your drawings. Our AI reads every dimension, calculates every material, and delivers a fully priced Bill of Quantities. 6× cheaper than traditional estimating services.</p>
-          <div className="fu d3" style={{display:"flex",gap:12,marginBottom:44,flexWrap:"wrap"}}>
-            <button style={{background:C.gold,color:"#080807",border:"none",padding:"14px 30px",fontSize:15,fontWeight:700,borderRadius:4,cursor:"pointer"}} onClick={onStart} className="glow">Get Your Estimate →</button>
-            {hasEsts&&<button style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer"}} onClick={onDash}>View Dashboard</button>}
-          </div>
-          <div className="fu d4" style={{display:"flex",gap:28,flexWrap:"wrap"}}>
-            {[["£49","Starting from"],["60s","Turnaround"],["100%","Itemised BOQ"],["£300+","Saved vs rivals"]].map(([v,l])=>(
-              <div key={l}><div style={{fontSize:26,fontWeight:700,color:C.gold}}>{v}</div><div style={{fontSize:11,color:C.dim,letterSpacing:1}}>{l}</div></div>
-            ))}
-          </div>
-        </div>
-        <div className="fu d2" style={{flexShrink:0}}>
-          <MockCard/>
-        </div>
-      </div>
-      <div style={{maxWidth:1100,margin:"0 auto 72px",padding:"0 24px",display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(250px,1fr))",gap:14}}>
-        {[["📐","Upload Any Drawings","JPG, PNG or PDF — up to 20 files. AI reads architectural, structural & planning drawings."],["🧱","Full Material Takeoff","Every item priced: from fixings to structural steel. Nothing missed."],["💷","UK 2025 Pricing","Cross-referenced with Jewson, Travis Perkins, Screwfix & BCIS."],["📊","Dashboard","Pipeline view — track every quote from first contact to won job."],["✏️","Edit & Adjust","Tweak any quantity or price after the AI generates the estimate."],["🔒","Hidden Markup","Add your overhead % silently — client never sees it."]].map(([i,t,d])=>(
-          <div key={t} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:"22px 18px"}} className="fc">
-            <span style={{fontSize:30,marginBottom:12,display:"block"}}>{i}</span>
-            <h3 style={{fontSize:15,fontWeight:700,marginBottom:7}}>{t}</h3>
-            <p style={{fontSize:13,color:C.muted,lineHeight:1.7}}>{d}</p>
-          </div>
-        ))}
-      </div>
-      <footer style={{borderTop:`1px solid ${C.border}`,padding:"18px 24px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
-        <span style={{fontWeight:700,fontSize:17}}>BuildCost<span style={{color:C.gold}}>AI</span></span>
-        <span style={{fontSize:12,color:C.dim}}>© 2025 · Estimates are indicative. Always verify with a qualified QS.</span>
-      </footer>
-    </div>
-  );
-}
-
-function MockCard(){
-  return(
-    <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:28,boxShadow:"0 24px 64px rgba(0,0,0,0.6)",minWidth:290,maxWidth:370}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18}}>
-        <div><div style={{fontSize:10,color:C.gold,letterSpacing:2,marginBottom:5,fontFamily:"monospace"}}>BCO-2025-047</div><div style={{fontSize:15,fontWeight:700}}>Rear Extension — 4m × 5m</div></div>
-        <span style={{background:"#1a2a1a",color:C.green,fontSize:11,padding:"4px 10px",borderRadius:20,border:`1px solid #2a4a2a`}}>✓ Won</span>
-      </div>
-      <div style={{fontSize:38,fontWeight:700,color:C.gold,marginBottom:4}}>£38,450</div>
-      <div style={{fontSize:12,color:C.dim,marginBottom:20}}>inc. labour, materials & contingency</div>
-      {[["🧱 Masonry",42],["🏗️ Groundworks",29],["🪵 Carpentry",21],["🔌 Electrical",14]].map(([l,w])=>(
-        <div key={l} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
-          <span style={{fontSize:12,width:100,color:C.muted}}>{l}</span>
-          <div style={{flex:1,height:4,background:C.border,borderRadius:2}}><div style={{height:"100%",background:C.gold,borderRadius:2,width:`${w}%`}}/></div>
-          <span style={{fontSize:11,color:C.text,width:28,textAlign:"right"}}>{w}%</span>
-        </div>
-      ))}
-      <div style={{fontSize:11,color:C.dim,borderTop:`1px solid ${C.border}`,paddingTop:12,marginTop:12}}>📅 10–14 weeks · 📋 127 items · 📄 PDF ready</div>
-    </div>
-  );
-}
-
-// ─── UPLOAD ───────────────────────────────────────────────────────────────────
-function Coll({icon,title,sub,open,setOpen,highlight,children}){
-  return(
-    <div style={{background:highlight?"#0f0e09":C.surface,border:`1px solid ${highlight?C.gold+"40":C.border}`,borderRadius:10,marginBottom:12,overflow:"hidden"}}>
-      <div style={{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",cursor:"pointer"}} onClick={()=>setOpen(v=>!v)}>
-        <span style={{fontSize:18}}>{icon}</span>
-        <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14}}>{title}</div><div style={{fontSize:11,color:C.muted,marginTop:2}}>{sub}</div></div>
-        <span style={{color:C.dim,fontSize:11}}>{open?"▲":"▼"}</span>
-      </div>
-      {open&&<div style={{padding:"14px 16px",borderTop:`1px solid ${C.border}`}}>{children}</div>}
-    </div>
-  );
-}
-
-function UploadScr({files,setFiles,onFiles,fileRef,dragOver,setDragOver,projType,setProjType,projDesc,setProjDesc,clientName,setClientName,clientEmail,setClientEmail,siteAddr,setSiteAddr,siteContact,setSiteContact,siteNotes,setSiteNotes,intNote,setIntNote,exclusions,setExclusions,overhead,setOverhead,region,setRegion,merchants,toggleMerchant,showSettings,setShowSettings,error,onSubmit,onDemo,onBack,fixings,setFixings,optionalExtras,setOptionalExtras,companyName,setCompanyName,companyEmail,setCompanyEmail,companyPhone,setCompanyPhone,companyAddress,setCompanyAddress}){
-  const [openSite,setOpenSite]=useState(false);
-  const [openExcl,setOpenExcl]=useState(false);
-  const [openNote,setOpenNote]=useState(false);
-  const [openOH,  setOpenOH  ]=useState(false);
-  const [openReg, setOpenReg ]=useState(false);
-  const [openFix, setOpenFix ]=useState(false);
-  return(
-    <div style={{minHeight:"100vh",background:C.bg,color:C.text}}>
-      <Nav onBack={onBack}/>
-      <div style={{maxWidth:760,margin:"0 auto",padding:"0 20px 80px"}}>
-        <div style={{padding:"36px 0 24px"}}><div style={{fontSize:10,letterSpacing:3,color:C.gold,marginBottom:14,fontFamily:"monospace"}}>NEW ESTIMATE</div><h2 style={{fontSize:"clamp(24px,4vw,34px)",fontWeight:700,letterSpacing:"-1px"}}>Upload Drawings</h2></div>
-        <div style={{border:`2px dashed ${C.border}`,borderRadius:14,padding:"46px 20px",textAlign:"center",cursor:"pointer",marginBottom:18,transition:"all 0.2s",...(dragOver?{border:`2px dashed ${C.gold}`,background:`${C.gold}08`}:{})}} className="dz"
-          onDragOver={e=>{e.preventDefault();setDragOver(true);}} onDragLeave={()=>setDragOver(false)}
-          onDrop={e=>{e.preventDefault();setDragOver(false);onFiles(e.dataTransfer.files);}} onClick={()=>fileRef.current.click()}>
-          <input ref={fileRef} type="file" multiple accept="image/*,.pdf" style={{display:"none"}} onChange={e=>onFiles(e.target.files)}/>
-          <div style={{fontSize:42,marginBottom:10}}>📐</div>
-          <div style={{fontSize:16,fontWeight:600,marginBottom:5}}>Drop construction drawings here</div>
-          <div style={{fontSize:13,color:C.dim}}>JPG · PNG · PDF · Up to 20 files</div>
-        </div>
-        {files.length>0&&(
-          <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px 16px",marginBottom:18}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
-              <span style={{fontSize:13,fontWeight:600}}>📁 {files.length} file{files.length>1?"s":""} ready</span>
-              <button style={{background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0}} onClick={()=>setFiles([])}>Remove all</button>
+        {/* Sidebar */}
+        <div className="dash-layout">
+          <div className="dash-sidebar">
+            <div className="dash-logo">
+              <div className="dash-logo-icon">🏗</div>
+              BuildCost<span>AI</span>
             </div>
-            <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:180,overflowY:"auto"}}>
-              {files.map((f,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:C.bg,borderRadius:6,fontSize:13}}>
-                  <span>{f.type==="application/pdf"?"📄":"🖼️"}</span>
-                  <span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.name}</span>
-                  <span style={{color:C.dim,fontSize:11}}>{(f.size/1024).toFixed(0)}KB</span>
-                  <button style={{background:"none",border:"none",color:C.muted,cursor:"pointer",padding:"0 3px"}} onClick={()=>setFiles(files.filter((_,j)=>j!==i))}>✕</button>
-                </div>
-              ))}
-            </div>
-            <button style={{background:"none",border:"none",color:C.gold,cursor:"pointer",fontSize:13,padding:0,marginTop:10}} onClick={()=>fileRef.current.click()}>+ Add more files</button>
-          </div>
-        )}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}} className="g2">
-          <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Client Name</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} placeholder="Mr & Mrs Johnson" value={clientName} onChange={e=>setClientName(e.target.value)}/></div>
-          <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Client Email</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} type="email" placeholder="client@email.com" value={clientEmail} onChange={e=>setClientEmail(e.target.value)}/></div>
-        </div>
-        <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Project Type</label>
-          <select style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} value={projType} onChange={e=>setProjType(e.target.value)}>
-            <option value="">Select…</option>{PROJECT_TYPES.map(t=><option key={t}>{t}</option>)}
-          </select>
-        </div>
-        <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Project Description</label>
-          <textarea style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box",resize:"vertical",lineHeight:1.7,minHeight:100}} rows={4} value={projDesc} onChange={e=>setProjDesc(e.target.value)} placeholder="e.g. Single storey rear extension, 4m x 5m, brick and block cavity wall, flat roof, bi-fold doors, UFH throughout…"/>
-        </div>
-        <Coll icon="📍" title="Site Details" sub="Address, contact & access notes" open={openSite} setOpen={setOpenSite}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}} className="g2">
-            <div><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Site Address</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} placeholder="12 Elm St, Manchester" value={siteAddr} onChange={e=>setSiteAddr(e.target.value)}/></div>
-            <div><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Site Contact</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} placeholder="Name & phone" value={siteContact} onChange={e=>setSiteContact(e.target.value)}/></div>
-          </div>
-          <div><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Access Notes</label><textarea style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box",resize:"vertical"}} rows={2} value={siteNotes} onChange={e=>setSiteNotes(e.target.value)}/></div>
-        </Coll>
-        {/* Region & Merchants */}
-        <Coll icon="📍" title={`Region & Pricing Area — ${REGIONS.find(r=>r.id===region)?.label||"North West"}`} sub="Adjusts all rates for your local market" open={openReg} setOpen={setOpenReg} highlight>
-          <div style={{marginBottom:16}}>
-            <label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Your Region</label>
-            <select style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} value={region} onChange={e=>setRegion(e.target.value)}>
-              {REGIONS.map(r=>(
-                <option key={r.id} value={r.id}>
-                  {r.label} ({r.multiplier>=1?"+":""}{Math.round((r.multiplier-1)*100)}% vs national average)
-                </option>
-              ))}
-            </select>
-            <div style={{fontSize:11,color:C.dim,marginTop:6}}>
-              Prices are automatically scaled for your region based on BCIS regional factors.
-            </div>
-          </div>
-          <div>
-            <label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Your Building Merchants <span style={{color:C.dim,fontWeight:400}}>(tick all you use)</span></label>
-            <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:4}}>
-              {MERCHANTS.map(m=>{
-                const active=merchants.includes(m);
-                return(
-                  <button key={m} onClick={()=>toggleMerchant(m)}
-                    style={{background:active?C.gold:"#1a1a18",color:active?"#080807":C.muted,border:`1px solid ${active?C.gold:C.border}`,padding:"7px 14px",borderRadius:20,fontSize:13,cursor:"pointer",transition:"all 0.15s"}}>
-                    {active?"✓ ":""}{m}
-                  </button>
-                );
-              })}
-            </div>
-            <div style={{fontSize:11,color:C.dim,marginTop:8}}>
-              Selected merchants will be used for all supplier references in the BOQ.
-            </div>
-          </div>
-        </Coll>
-
-        <Coll icon="🚫" title="Items to Exclude" sub="Remove anything the customer has priced elsewhere" open={openExcl} setOpen={setOpenExcl}>
-          <textarea style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box",resize:"vertical"}} rows={3} value={exclusions} onChange={e=>setExclusions(e.target.value)} placeholder={"e.g.\n- Windows and doors (customer has separate quote)\n- Kitchen units and appliances"}/>
-        </Coll>
-        <Coll icon="💬" title="Internal Notes" sub="Private notes — never shown to client" open={openNote} setOpen={setOpenNote}>
-          <textarea style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box",resize:"vertical"}} rows={3} value={intNote} onChange={e=>setIntNote(e.target.value)} placeholder="e.g. Client flexible on budget. Check groundworks depth."/>
-        </Coll>
-        <Coll icon="🔒" title={`Office & Overhead Markup — ${overhead}%`} sub="Baked silently into all costs, never visible to client" open={openOH} setOpen={setOpenOH} highlight>
-          <p style={{fontSize:13,color:C.muted,lineHeight:1.7,marginBottom:14}}>Covers office running costs, estimating time and profit margin. <strong style={{color:C.text}}>Baked into every line item</strong> — client never sees this figure.</p>
-          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
-            <span style={{fontSize:12,color:C.dim}}>0%</span>
-            <input type="range" min={0} max={30} step={1} value={overhead} onChange={e=>setOverhead(Number(e.target.value))} style={{flex:1}}/>
-            <span style={{fontSize:12,color:C.dim}}>30%</span>
-            <div style={{background:C.gold,color:"#080807",fontWeight:700,fontSize:17,padding:"6px 14px",borderRadius:6,minWidth:52,textAlign:"center"}}>{overhead}%</div>
-          </div>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            {[[10,"Tight"],[15,"Standard"],[20,"Premium"]].map(([v,l])=>(
-              <button key={v} style={{background:overhead===v?C.gold:"#222",color:overhead===v?"#080807":C.muted,border:"none",padding:"6px 14px",borderRadius:20,fontSize:12,cursor:"pointer"}} onClick={()=>setOverhead(v)}>{v}% — {l}</button>
-            ))}
-          </div>
-        </Coll>
-        {/* ── FIXINGS PREFERENCES ─────────────────────────────────── */}
-        <Coll icon="🔧" title="Fixings & Materials Preferences" sub="Set your preferred fixings — screws vs nails, pipe fittings etc" open={openFix} setOpen={setOpenFix}>
-          <div style={{display:"flex",flexDirection:"column",gap:16}}>
-
-            <div>
-              <label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:8,color:"#bbb"}}>🪵 Carpentry Fixings</label>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                {[["screws","Screws"],["nails","Nails"],["both","Price Both"]].map(([v,l])=>(
-                  <button key={v} onClick={()=>setFixings(p=>({...p,carpentry:v}))}
-                    style={{background:fixings.carpentry===v?C.gold:"#1a1a18",color:fixings.carpentry===v?"#080807":C.muted,border:`1px solid ${fixings.carpentry===v?C.gold:C.border}`,padding:"8px 16px",borderRadius:20,fontSize:13,cursor:"pointer"}}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:8,color:"#bbb"}}>🏗️ Structural Framing Fixings</label>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                {[["screws","Framing Screws"],["nails","Nails"],["both","Price Both"]].map(([v,l])=>(
-                  <button key={v} onClick={()=>setFixings(p=>({...p,framing:v}))}
-                    style={{background:fixings.framing===v?C.gold:"#1a1a18",color:fixings.framing===v?"#080807":C.muted,border:`1px solid ${fixings.framing===v?C.gold:C.border}`,padding:"8px 16px",borderRadius:20,fontSize:13,cursor:"pointer"}}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:8,color:"#bbb"}}>🚿 Plumbing Fittings</label>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                {[["compression","Compression"],["soldered","Solder/End-feed"],["pushfit","Push-fit"],["mixed","Mixed"]].map(([v,l])=>(
-                  <button key={v} onClick={()=>setFixings(p=>({...p,plumbing:v}))}
-                    style={{background:fixings.plumbing===v?C.gold:"#1a1a18",color:fixings.plumbing===v?"#080807":C.muted,border:`1px solid ${fixings.plumbing===v?C.gold:C.border}`,padding:"8px 16px",borderRadius:20,fontSize:13,cursor:"pointer"}}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:8,color:"#bbb"}}>🪠 Pipe Material</label>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                {[["copper","Copper"],["plastic","Plastic (MDPE)"],["mixed","Mixed"]].map(([v,l])=>(
-                  <button key={v} onClick={()=>setFixings(p=>({...p,pipeMaterial:v}))}
-                    style={{background:fixings.pipeMaterial===v?C.gold:"#1a1a18",color:fixings.pipeMaterial===v?"#080807":C.muted,border:`1px solid ${fixings.pipeMaterial===v?C.gold:C.border}`,padding:"8px 16px",borderRadius:20,fontSize:13,cursor:"pointer"}}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:8,color:"#bbb"}}>🔌 Electrical Cable Routing</label>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                {[["clipped","Clipped Direct"],["conduit","In Conduit"],["trunking","In Trunking"]].map(([v,l])=>(
-                  <button key={v} onClick={()=>setFixings(p=>({...p,electrical:v}))}
-                    style={{background:fixings.electrical===v?C.gold:"#1a1a18",color:fixings.electrical===v?"#080807":C.muted,border:`1px solid ${fixings.electrical===v?C.gold:C.border}`,padding:"8px 16px",borderRadius:20,fontSize:13,cursor:"pointer"}}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-          </div>
-        </Coll>
-
-        {/* Company Branding */}
-        <div style={{background:"#0f0f0e",border:"1px solid #1e1e1c",borderRadius:10,padding:"16px",marginBottom:12}}>
-          <div style={{fontSize:12,fontWeight:600,color:"#bbb",marginBottom:12,letterSpacing:1}}>YOUR COMPANY DETAILS <span style={{color:"#555",fontWeight:400}}>(appears on printed estimate)</span></div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
-            <div>
-              <label style={{display:"block",fontSize:11,color:"#888",marginBottom:4}}>Company Name</label>
-              <input style={{width:"100%",background:"#111",border:"1px solid #1e1e1c",borderRadius:6,padding:"9px 12px",color:"#f0ede8",fontSize:13,boxSizing:"border-box"}} placeholder="Smith & Sons Construction" value={companyName} onChange={e=>setCompanyName(e.target.value)}/>
-            </div>
-            <div>
-              <label style={{display:"block",fontSize:11,color:"#888",marginBottom:4}}>Phone</label>
-              <input style={{width:"100%",background:"#111",border:"1px solid #1e1e1c",borderRadius:6,padding:"9px 12px",color:"#f0ede8",fontSize:13,boxSizing:"border-box"}} placeholder="07700 900000" value={companyPhone} onChange={e=>setCompanyPhone(e.target.value)}/>
-            </div>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-            <div>
-              <label style={{display:"block",fontSize:11,color:"#888",marginBottom:4}}>Email</label>
-              <input style={{width:"100%",background:"#111",border:"1px solid #1e1e1c",borderRadius:6,padding:"9px 12px",color:"#f0ede8",fontSize:13,boxSizing:"border-box"}} placeholder="info@smithconstruction.co.uk" value={companyEmail} onChange={e=>setCompanyEmail(e.target.value)}/>
-            </div>
-            <div>
-              <label style={{display:"block",fontSize:11,color:"#888",marginBottom:4}}>Address</label>
-              <input style={{width:"100%",background:"#111",border:"1px solid #1e1e1c",borderRadius:6,padding:"9px 12px",color:"#f0ede8",fontSize:13,boxSizing:"border-box"}} placeholder="123 High Street, Manchester" value={companyAddress} onChange={e=>setCompanyAddress(e.target.value)}/>
-            </div>
-          </div>
-        </div>
-
-        {/* Optional Extras */}
-        <div style={{background:"#0f0f0e",border:"1px solid #1e1e1c",borderRadius:10,padding:"16px",marginBottom:12}}>
-          <div style={{fontSize:12,fontWeight:600,color:"#bbb",marginBottom:12,letterSpacing:1}}>OPTIONAL EXTRAS</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             {[
-              ["asbestos","🔬 Asbestos Survey"],
-              ["batSurvey","🦇 Bat/Ecology Survey"],
-              ["watchingBrief","⛏️ Archaeological Watching Brief"],
-              ["trafficManagement","🚦 Traffic Management"],
-              ["cdmCoordinator","📋 CDM Coordinator"],
-              ["partyWall","🏠 Party Wall Surveyor"],
-            ].map(([key,label])=>(
-              <div key={key} onClick={()=>setOptionalExtras(p=>({...p,[key]:!p[key]}))}
-                style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:8,cursor:"pointer",background:optionalExtras[key]?"#1a1a0a":"#111",border:"1px solid "+(optionalExtras[key]?"#d4a853":"#1e1e1c")}}>
-                <div style={{width:18,height:18,borderRadius:4,border:"2px solid "+(optionalExtras[key]?"#d4a853":"#444"),background:optionalExtras[key]?"#d4a853":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  {optionalExtras[key]&&<span style={{color:"#080807",fontSize:12,fontWeight:700}}>✓</span>}
-                </div>
-                <span style={{fontSize:13,color:optionalExtras[key]?"#d4a853":"#888"}}>{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {error&&<div style={{background:"#2a1212",border:"1px solid #5a2020",borderRadius:8,padding:"12px 16px",marginBottom:16,fontSize:13,color:"#ff8080"}}>⚠️ {error}</div>}
-
-        {/* Demo mode banner */}
-        <div style={{background:"#0f0e09",border:`1px solid ${C.gold}40`,borderRadius:10,padding:"16px 18px",marginBottom:16}}>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-            <span style={{fontSize:18}}>🎮</span>
-            <div>
-              <div style={{fontWeight:600,fontSize:14}}>Try Demo Mode</div>
-              <div style={{fontSize:11,color:C.muted,marginTop:2}}>Test the full app with a pre-built estimate — no API key needed</div>
-            </div>
-          </div>
-          <button style={{width:"100%",background:"transparent",border:`1px solid ${C.gold}`,color:C.gold,padding:"12px",fontSize:14,fontWeight:600,borderRadius:6,cursor:"pointer"}} onClick={onDemo}>
-            🚀 Load Demo Estimate →
-          </button>
-        </div>
-
-        <button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"}} onClick={onSubmit} className="glow">🔍 Analyse & Generate Estimate →</button>
-        <p style={{color:C.dim,fontSize:11,textAlign:"center",marginTop:12,lineHeight:1.6}}>AI estimates are indicative. Always verify with a qualified QS for tender purposes.</p>
-      </div>
-    </div>
-  );
-}
-
-// ─── LOADING ──────────────────────────────────────────────────────────────────
-function LoadingScr({step}){
-  return(
-    <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:24,padding:32,color:C.text}}>
-      <div style={{width:80,height:80,border:`3px solid ${C.border}`,borderTop:`3px solid ${C.gold}`,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center"}} className="spin"><span style={{fontSize:24}}>⬛</span></div>
-      <h2 style={{fontSize:24,fontWeight:700}}>Analysing your project…</h2>
-      <p style={{color:C.muted,fontSize:14}}>Reading drawings and computing material quantities</p>
-      <div style={{display:"flex",flexDirection:"column",gap:9,maxWidth:380,width:"100%"}}>
-        {STEPS.map((st,i)=>(
-          <div key={i} style={{fontSize:13,color:i===step?C.gold:i<step?C.green:C.dim,display:"flex",gap:9,alignItems:"center"}}>
-            <span style={{fontFamily:"monospace",width:16}}>{i<step?"✓":i===step?"●":"○"}</span>{st}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── RESULTS ──────────────────────────────────────────────────────────────────
-function ResultsScr({result,expandCat,setExpandCat,activeTab,setActiveTab,onNew,onDash,editMode,setEditMode,onUpdate,onDelete,emailModal,setEmailModal,emailSent,setEmailSent,labourRates,setLabourRates,profitMargin,setProfitMargin,exportExcel,companyName,companyEmail,companyPhone,companyAddress}){
-  const [editRes,setEditRes]=useState(result);
-  const [delConfirm,setDelConfirm]=useState(false);
-  const [noteVal,setNoteVal]=useState(result?._internalNote||"");
-  const [noteSaved,setNoteSaved]=useState(false);
-  const [showProfit,setShowProfit]=useState(false);
-  const [showLabour,setShowLabour]=useState(false);
-  useEffect(()=>{setEditRes(result);setNoteVal(result?._internalNote||"");},[result]);
-  if(!result)return null;
-  const r=editMode?editRes:result;
-  const confCol={High:C.green,Medium:C.amber,Low:C.red}[r.confidence]||C.muted;
-  const saveEdits=()=>{onUpdate(editRes);setEditMode(false);};
-
-  // Profit calculations — private, never shown to client
-  const exVAT = (r.grandTotal||r.totalCost) / 1.2;
-  const totalCosts = r.totalCost || 0;
-  const profitAmount = Math.round(totalCosts * (profitMargin / 100));
-  const chargeToClient = totalCosts + profitAmount;
-  const chargeIncVAT = Math.round(chargeToClient * 1.2);
-  const actualLabour = r.laborCost || 0;
-  const editItem=(catName,idx,field,val)=>{
-    const cats=editRes.categories.map(cat=>{
-      if(cat.name!==catName)return cat;
-      const items=cat.items.map((it,i)=>{if(i!==idx)return it;const u={...it,[field]:["quantity","unitCost"].includes(field)?parseFloat(val)||0:val};u.totalCost=Math.round(u.quantity*u.unitCost);return u;});
-      return{...cat,subtotal:items.reduce((a,it)=>a+it.totalCost,0),items};
-    });
-    const tc=cats.reduce((a,c)=>a+c.subtotal,0);const sub=tc+(editRes.contingency||0)+(editRes.designFees||0);
-    setEditRes({...editRes,categories:cats,totalCost:tc,vatAmount:Math.round(sub*0.2),grandTotal:sub+Math.round(sub*0.2)});
-  };
-  const saveNote=()=>{onUpdate({_internalNote:noteVal});setNoteSaved(true);setTimeout(()=>setNoteSaved(false),2000);};
-  const disp=editMode?editRes:r;
-  return(
-    <div style={{minHeight:"100vh",background:C.bg,color:C.text}} id="pr">
-      {/* Print-only branded header */}
-      {(companyName||companyPhone||companyEmail)&&(
-        <div className="print-only" style={{borderBottom:"3px solid #d4a853",paddingBottom:16,marginBottom:24,padding:"20px 24px"}}>
-          {companyName&&<div style={{fontSize:22,fontWeight:700}}>{companyName}</div>}
-          <div style={{display:"flex",gap:20,marginTop:6,fontSize:12}}>
-            {companyPhone&&<span>📞 {companyPhone}</span>}
-            {companyEmail&&<span>✉ {companyEmail}</span>}
-            {companyAddress&&<span>📍 {companyAddress}</span>}
-          </div>
-        </div>
-      )}
-      <Nav onNew={onNew} onDash={onDash}/>
-      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"32px 0 24px"}} className="no-print">
-        <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px"}}>
-          <div style={{fontSize:10,letterSpacing:3,color:C.gold,marginBottom:6,fontFamily:"monospace"}}>{r.projectRef||"ESTIMATE"} · {r.projectType}</div>
-          <h2 style={{fontSize:"clamp(22px,4vw,34px)",fontWeight:700,letterSpacing:"-1px",margin:"6px 0"}}>{r.projectName}</h2>
-          {r._clientName&&<div style={{color:C.muted,fontSize:13,marginBottom:5}}>👤 {r._clientName}{r._clientEmail?` · ${r._clientEmail}`:""}</div>}
-          {r._siteAddr&&<div style={{color:C.muted,fontSize:13,marginBottom:5}}>📍 {r._siteAddr}{r._siteContact?` · ${r._siteContact}`:""}</div>}
-          <p style={{color:C.muted,fontSize:13,lineHeight:1.8,maxWidth:660,marginBottom:8}}>{r.summary}</p>
-          <div style={{fontSize:12,color:C.dim}}>📅 {r.timeline} · <span style={{color:confCol}}>● {r.confidence}</span> · {r.confidenceReason}</div>
-          <div style={{display:"flex",gap:8,marginTop:18,flexWrap:"wrap"}}>
-            <Abtn onClick={()=>window.print()}>🖨️ Print / PDF</Abtn>
-            <Abtn onClick={()=>setEmailModal(true)}>📧 Email Client</Abtn>
-            <Abtn onClick={()=>exportExcel(result)}>📊 Download Excel</Abtn>
-            <Abtn onClick={()=>editMode?saveEdits():setEditMode(true)} gold={editMode}>{editMode?"💾 Save Changes":"✏️ Edit Estimate"}</Abtn>
-            {editMode&&<Abtn onClick={()=>{setEditMode(false);setEditRes(result);}}>✕ Cancel</Abtn>}
-            <Abtn onClick={()=>setDelConfirm(true)} danger>🗑 Delete</Abtn>
-          </div>
-        </div>
-      </div>
-      <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 80px"}}>
-        <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:"24px 20px",margin:"24px 0"}}>
-          <div style={{marginBottom:18}}>
-            <div style={{fontSize:10,letterSpacing:3,color:C.gold,marginBottom:5,fontFamily:"monospace"}}>TOTAL PROJECT COST</div>
-            <div style={{fontSize:"clamp(32px,7vw,52px)",fontWeight:700,color:C.gold,letterSpacing:"-2px"}}>{fmt(disp.grandTotal||disp.totalCost)}</div>
-            <div style={{fontSize:12,color:C.dim,marginTop:3}}>inc. contingency & VAT at 20%</div>
-          </div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:9}}>
-            {[["Materials",r.materialCost],["Labour",r.laborCost],["Plant & Prelims",(r.plantCost||0)+(r.prelimsCost||0)],["Contingency",r.contingency],["VAT (20%)",r.vatAmount]].filter(([,v])=>v>0).map(([l,v])=>(
-              <div key={l} style={{background:"#111",border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 14px"}}>
-                <div style={{fontSize:10,color:C.dim,marginBottom:3}}>{l}</div>
-                <div style={{fontSize:15,fontWeight:700}}>{fmt(v)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div style={{background:"#0f0e09",border:`1px solid ${C.gold}28`,borderRadius:10,padding:"14px 16px",marginBottom:20}} className="no-print">
-          <div style={{fontSize:10,color:C.gold,letterSpacing:2,marginBottom:8,fontFamily:"monospace"}}>🔒 INTERNAL NOTES — NOT VISIBLE TO CLIENT</div>
-          <textarea style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box",marginBottom:8,background:"#0a0908",resize:"vertical"}} rows={2} value={noteVal} onChange={e=>setNoteVal(e.target.value)} placeholder="Add private notes…"/>
-          <button style={{background:"none",border:"none",color:noteSaved?C.green:C.gold,cursor:"pointer",fontSize:13,padding:0}} onClick={saveNote}>{noteSaved?"✓ Saved":"Save note"}</button>
-        </div>
-        {/* ── PROFIT MARGIN PANEL ── private, no-print ─────────────────── */}
-        <div style={{background:"#0a0f0a",border:`1px solid ${C.green}30`,borderRadius:10,padding:"14px 16px",marginBottom:12}} className="no-print">
-          <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={()=>setShowProfit(v=>!v)}>
-            <span style={{fontSize:18}}>💰</span>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:600,fontSize:14}}>Profit Margin — {profitMargin}%</div>
-              <div style={{fontSize:11,color:C.muted,marginTop:2}}>Your profit on this job — never shown to client</div>
-            </div>
-            <div style={{color:C.green,fontWeight:700,fontSize:16}}>{fmt(profitAmount)}</div>
-            <span style={{color:C.dim,fontSize:11,marginLeft:6}}>{showProfit?"▲":"▼"}</span>
-          </div>
-          {showProfit&&(
-            <div style={{borderTop:`1px solid ${C.border}`,marginTop:14,paddingTop:14}}>
-              <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
-                <span style={{fontSize:12,color:C.dim}}>0%</span>
-                <input type="range" min={0} max={50} step={1} value={profitMargin} onChange={e=>setProfitMargin(Number(e.target.value))} style={{flex:1,accentColor:C.green}}/>
-                <span style={{fontSize:12,color:C.dim}}>50%</span>
-                <div style={{background:C.green,color:"#080807",fontWeight:700,fontSize:16,padding:"5px 13px",borderRadius:6,minWidth:48,textAlign:"center"}}>{profitMargin}%</div>
-              </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
-                {[
-                  ["Cost of Works (ex VAT)",fmt(totalCosts),"Your actual cost"],
-                  ["Profit ("+profitMargin+"%)",fmt(profitAmount),"Your margin"],
-                  ["Charge to Client (ex VAT)",fmt(chargeToClient),"What to quote"],
-                  ["Charge to Client (inc VAT)",fmt(chargeIncVAT),"Final client price"],
-                ].map(([l,v,sub])=>(
-                  <div key={l} style={{background:"#111",border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 14px"}}>
-                    <div style={{fontSize:10,color:C.dim,marginBottom:3}}>{l}</div>
-                    <div style={{fontSize:16,fontWeight:700,color:C.green}}>{v}</div>
-                    <div style={{fontSize:10,color:C.dim,marginTop:2}}>{sub}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{fontSize:11,color:C.dim,lineHeight:1.6}}>
-                💡 The overhead markup you set at quote stage has already been baked into the BOQ rates. This profit margin is on top of that — pure profit after all costs.
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── LABOUR BREAKDOWN ── editable day rates ────────────────────── */}
-        <div style={{background:"#0a0a0f",border:`1px solid #60a5fa30`,borderRadius:10,padding:"14px 16px",marginBottom:20}} className="no-print">
-          <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={()=>setShowLabour(v=>!v)}>
-            <span style={{fontSize:18}}>👷</span>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:600,fontSize:14}}>Labour Breakdown</div>
-              <div style={{fontSize:11,color:C.muted,marginTop:2}}>Set what you pay your lads — adjusts labour costs</div>
-            </div>
-            <div style={{color:"#60a5fa",fontWeight:700,fontSize:16}}>{fmt(actualLabour)}</div>
-            <span style={{color:C.dim,fontSize:11,marginLeft:6}}>{showLabour?"▲":"▼"}</span>
-          </div>
-          {showLabour&&(
-            <div style={{borderTop:`1px solid ${C.border}`,marginTop:14,paddingTop:14}}>
-              <p style={{fontSize:12,color:C.muted,marginBottom:14,lineHeight:1.6}}>
-                Set your actual day rates below. The AI estimated labour at <strong style={{color:C.text}}>{fmt(actualLabour)}</strong> based on UK averages. Adjust to match what you pay — your margin section above will update accordingly.
-              </p>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
-                {Object.entries(labourRates).map(([key,{label,rate}])=>(
-                  <div key={key} style={{background:"#111",border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 14px"}}>
-                    <div style={{fontSize:11,color:C.muted,marginBottom:6}}>{label}</div>
-                    <div style={{display:"flex",alignItems:"center",gap:8}}>
-                      <span style={{fontSize:13,color:C.dim}}>£</span>
-                      <input type="number" value={rate}
-                        onChange={e=>setLabourRates(prev=>({...prev,[key]:{...prev[key],rate:Number(e.target.value)||0}}))}
-                        style={{flex:1,background:"#0a0a0a",border:`1px solid ${C.border}`,borderRadius:5,padding:"6px 8px",color:C.text,fontSize:14,fontWeight:700,width:"100%"}}/>
-                      <span style={{fontSize:11,color:C.dim}}>/day</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div style={{background:"#111",border:`1px solid ${C.border}`,borderRadius:8,padding:"12px 14px"}}>
-                <div style={{fontSize:11,color:C.dim,marginBottom:4}}>Average day rate across all trades</div>
-                <div style={{fontSize:20,fontWeight:700,color:"#60a5fa"}}>
-                  £{Math.round(Object.values(labourRates).reduce((s,{rate})=>s+rate,0)/Object.values(labourRates).length)}/day
-                </div>
-              </div>
-              <p style={{fontSize:11,color:C.dim,marginTop:10,lineHeight:1.5}}>
-                💡 To recalculate the full BOQ with your exact rates, generate a new estimate and include your day rates in the project description.
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div style={{display:"flex",gap:2,marginBottom:22,borderBottom:`1px solid ${C.border}`,overflowX:"auto"}} className="no-print">
-          {[["breakdown","📋 Full BOQ"],["inclusions","✓ Inclusions"],["exclusions","✗ Exclusions"],["notes","📝 Notes"]].map(([t,l])=>(
-            <button key={t} style={{background:"none",border:"none",borderBottom:`2px solid ${activeTab===t?C.gold:"transparent"}`,color:activeTab===t?C.gold:C.muted,padding:"11px 14px",cursor:"pointer",fontSize:13,whiteSpace:"nowrap",marginBottom:-1}} onClick={()=>setActiveTab(t)}>{l}</button>
-          ))}
-        </div>
-        {activeTab==="breakdown"&&(
-          <>
-            <h3 style={{fontSize:19,fontWeight:700,marginBottom:16}}>Bill of Quantities</h3>
-            {disp.categories?.map(cat=>(
-              <div key={cat.name} style={{marginBottom:8,border:`1px solid ${C.border}`,borderRadius:10,overflow:"hidden"}}>
-                <div style={{display:"flex",alignItems:"center",gap:10,padding:"13px 16px",background:"#111",cursor:"pointer"}} onClick={()=>setExpandCat(expandCat===cat.name?null:cat.name)}>
-                  <span style={{fontSize:18}}>{cat.icon}</span>
-                  <span style={{flex:1,fontWeight:600,fontSize:14}}>{cat.name}</span>
-                  <span style={{color:C.gold,fontWeight:700,fontSize:14}}>{fmt(cat.subtotal)}</span>
-                  <span style={{color:C.dim,fontSize:11,marginLeft:6}}>{expandCat===cat.name?"▲":"▼"}</span>
-                </div>
-                {expandCat===cat.name&&(
-                  <div style={{background:"#0c0c0b",overflowX:"auto"}}>
-                    <div style={{display:"flex",padding:"8px 14px",fontSize:10,color:C.dim,letterSpacing:1,borderBottom:`1px solid #1a1a18`,fontFamily:"monospace",gap:6,minWidth:520}}>
-                      <span style={{width:32}}>Ref</span><span style={{flex:3}}>Item</span><span style={{width:52,textAlign:"right"}}>Qty</span><span style={{width:32,textAlign:"right"}}>Unit</span><span style={{width:64,textAlign:"right"}}>Rate</span><span style={{width:64,textAlign:"right"}}>Total</span>
-                    </div>
-                    {cat.items?.map((item,i)=>(
-                      <div key={i} style={{display:"flex",padding:"11px 14px",fontSize:13,alignItems:"flex-start",gap:6,borderBottom:`1px solid #131312`,background:i%2?"#0a0a09":"transparent",minWidth:520}}>
-                        <span style={{width:32,color:C.dim,fontSize:11,flexShrink:0,paddingTop:2}}>{item.ref}</span>
-                        <div style={{flex:3,minWidth:0}}>
-                          <div style={{fontWeight:600,marginBottom:2}}>{item.name}</div>
-                          <div style={{fontSize:11,color:C.muted,lineHeight:1.5}}>{item.description}</div>
-                          {item.supplier&&<div style={{fontSize:10,color:C.dim}}>📦 {item.supplier}</div>}
-                        </div>
-                        {editMode?(
-                          <>
-                            <input style={{width:50,background:"#111",border:`1px solid ${C.border}`,borderRadius:4,padding:"3px 5px",color:C.text,fontSize:12,textAlign:"right"}} type="number" value={item.quantity} onChange={e=>editItem(cat.name,i,"quantity",e.target.value)}/>
-                            <span style={{width:32,textAlign:"right",color:C.muted,fontSize:10,paddingTop:5,flexShrink:0}}>{item.unit}</span>
-                            <input style={{width:60,background:"#111",border:`1px solid ${C.border}`,borderRadius:4,padding:"3px 5px",color:C.text,fontSize:12,textAlign:"right"}} type="number" step="0.01" value={item.unitCost} onChange={e=>editItem(cat.name,i,"unitCost",e.target.value)}/>
-                          </>
-                        ):(
-                          <>
-                            <span style={{width:52,textAlign:"right",flexShrink:0}}>{item.quantity}</span>
-                            <span style={{width:32,textAlign:"right",color:C.muted,fontSize:10,flexShrink:0,paddingTop:2}}>{item.unit}</span>
-                            <span style={{width:64,textAlign:"right",flexShrink:0}}>{fmt(item.unitCost)}</span>
-                          </>
-                        )}
-                        <span style={{width:64,textAlign:"right",fontWeight:700,flexShrink:0}}>{fmt(item.totalCost)}</span>
-                      </div>
-                    ))}
-                    <div style={{display:"flex",justifyContent:"space-between",padding:"12px 14px",borderTop:`1px solid ${C.border}`,fontWeight:700,color:C.gold,fontSize:14}}><span>Subtotal — {cat.name}</span><span>{fmt(cat.subtotal)}</span></div>
-                  </div>
+              { id:'dashboard', icon:'◼', label:'Dashboard' },
+              { id:'projects', icon:'📁', label:'Projects' },
+              { id:'generate', icon:'✦', label:'New BOQ', action:true },
+              { id:'templates', icon:'📄', label:'Templates' },
+              { id:'clients', icon:'👤', label:'Clients' },
+              { id:'exports', icon:'📥', label:'Exports' },
+            ].map(item => (
+              <div
+                key={item.id}
+                className={`dash-nav-item ${dashTab === item.id ? 'active' : ''}`}
+                onClick={() => item.id === 'generate' ? setShowModal(true) : setDashTab(item.id)}
+              >
+                <span className="dash-nav-icon">{item.icon}</span>
+                {item.label}
+                {item.id === 'generate' && (
+                  <span style={{marginLeft:'auto',background:'var(--gold)',color:'#0F0F0D',fontSize:'10px',fontWeight:700,padding:'2px 7px',borderRadius:'4px'}}>NEW</span>
                 )}
               </div>
             ))}
-            <div style={{border:`1px solid ${C.border}`,borderRadius:10,overflow:"hidden",marginTop:18,marginBottom:28}}>
-              {[["Sub Total",disp.totalCost],[`Contingency (${r.contingencyPercent}%)`,disp.contingency],r.designFees>0?["Design Fees",disp.designFees]:null,["Sub Total (ex. VAT)",(disp.grandTotal||disp.totalCost)/1.2],["VAT at 20%",disp.vatAmount]].filter(Boolean).map(([l,v])=>(
-                <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"12px 18px",borderBottom:`1px solid ${C.border}`,fontSize:14}}><span>{l}</span><span>{fmt(v)}</span></div>
-              ))}
-              <div style={{display:"flex",justifyContent:"space-between",padding:"15px 18px",background:"#1a1508",color:C.gold,fontWeight:700,fontSize:17}}><span>TOTAL INC. VAT</span><span>{fmt(disp.grandTotal||disp.totalCost)}</span></div>
-            </div>
-          </>
-        )}
-        {activeTab==="inclusions"&&<ListTab items={r.inclusions} title="What's Included" col={C.green} sym="✓"/>}
-        {activeTab==="exclusions"&&<ListTab items={r.exclusions} title="Exclusions" col={C.red} sym="✗"/>}
-        {activeTab==="notes"&&<ListTab items={r.notes} title="Estimator Notes" col={C.gold} sym="•"/>}
-        <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:24}} className="no-print">
-          <button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"}} onClick={()=>window.print()}>🖨️ Print / Save as PDF</button>
-          <div style={{display:"flex",gap:10}}><button style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer",flex:1}} onClick={onNew}>+ New Estimate</button><button style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer",flex:1}} onClick={onDash}>📊 Dashboard</button></div>
-        </div>
-      </div>
-      {emailModal&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.78)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setEmailModal(false)}>
-          <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:26,width:"100%",maxWidth:520,maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
-            <h3 style={{fontSize:19,fontWeight:700,marginBottom:16}}>📧 Email Estimate to Client</h3>
-            {emailSent?(
-              <div style={{textAlign:"center",padding:"24px 0"}}><div style={{fontSize:44,marginBottom:10}}>✅</div><div style={{fontSize:16,fontWeight:700,marginBottom:6}}>Estimate sent!</div><button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"}} onClick={()=>{setEmailModal(false);setEmailSent(false);}}>Close</button></div>
-            ):(
-              <>
-                <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>To</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} defaultValue={r._clientEmail} placeholder="client@email.com"/></div>
-                <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Subject</label><input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box"}} defaultValue={`Estimate: ${r.projectName} — ${fmt(r.grandTotal||r.totalCost)}`}/></div>
-                <div style={{marginBottom:14}}><label style={{display:"block",fontSize:12,fontWeight:600,marginBottom:6,color:"#bbb"}}>Message</label><textarea style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box",resize:"vertical"}} rows={5} defaultValue={`Dear ${r._clientName||"Client"},\n\nPlease find your construction estimate for ${r.projectName}.\n\nTotal: ${fmt(r.grandTotal||r.totalCost)} inc. VAT\nTimeline: ${r.timeline}\n\nKind regards,\nBuildCostAI`}/></div>
-                <div style={{display:"flex",gap:10}}><button style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer",flex:1}} onClick={()=>setEmailModal(false)}>Cancel</button><button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer",flex:2}} onClick={()=>setEmailSent(true)}>Send Estimate 📧</button></div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-      {delConfirm&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.78)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setDelConfirm(false)}>
-          <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:26,maxWidth:380,textAlign:"center"}} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:38,marginBottom:10}}>🗑</div>
-            <h3 style={{fontSize:17,fontWeight:700,marginBottom:8}}>Delete this estimate?</h3>
-            <p style={{color:C.muted,fontSize:13,marginBottom:22}}>This cannot be undone.</p>
-            <div style={{display:"flex",gap:10}}><button style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,padding:"14px 22px",fontSize:14,borderRadius:4,cursor:"pointer",flex:1}} onClick={()=>setDelConfirm(false)}>Cancel</button><button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer",flex:1,background:C.red}} onClick={()=>{setDelConfirm(false);onDelete();}}>Delete</button></div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Abtn({onClick,children,gold,danger}){return(<button style={{background:gold?C.gold:danger?"transparent":"#1a1a18",color:gold?"#080807":danger?C.red:C.text,border:`1px solid ${gold?C.gold:danger?C.red+"55":C.border}`,padding:"8px 14px",borderRadius:6,cursor:"pointer",fontSize:13}} onClick={onClick}>{children}</button>);}
-function ListTab({items,title,col,sym}){return(<div style={{paddingBottom:36}}><h3 style={{fontSize:19,fontWeight:700,marginBottom:16}}>{title}</h3>{items?.length?items.map((x,i)=>(<div key={i} style={{padding:"11px 0",borderBottom:`1px solid ${C.border}`,fontSize:14,color:"#bbb",display:"flex",gap:12,lineHeight:1.6}}><span style={{color:col,flexShrink:0}}>{sym}</span>{x}</div>)):<p style={{color:C.muted,fontSize:14}}>None listed.</p>}</div>);}
-
-// ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function DashScr({estimates,onNew,onView,onBack,onStatus,onDelete}){
-  const [search,setSearch]=useState("");
-  const [filter,setFilter]=useState("All");
-  const totalVal=estimates.reduce((a,e)=>a+(e.grandTotal||e.totalCost||0),0);
-  const wonVal=estimates.filter(e=>e.pipelineStatus==="Won").reduce((a,e)=>a+(e.grandTotal||e.totalCost||0),0);
-  const wonCount=estimates.filter(e=>e.pipelineStatus==="Won").length;
-  const filtered=estimates.filter(e=>filter==="All"||e.pipelineStatus===filter).filter(e=>!search||[e.projectName,e._clientName,e._siteAddr].some(v=>v?.toLowerCase().includes(search.toLowerCase())));
-  return(
-    <div style={{minHeight:"100vh",background:C.bg,color:C.text}}>
-      <Nav onBack={onBack} onNew={onNew}/>
-      <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 80px"}}>
-        <div style={{padding:"36px 0 24px"}}><div style={{fontSize:10,letterSpacing:3,color:C.gold,marginBottom:14,fontFamily:"monospace"}}>DASHBOARD</div><h2 style={{fontSize:"clamp(24px,4vw,34px)",fontWeight:700,letterSpacing:"-1px"}}>Job Pipeline</h2></div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12,marginBottom:28}}>
-          {[["Pipeline",fmt(totalVal),"All estimates",C.gold],["Won",fmt(wonVal),`${wonCount} job${wonCount!==1?"s":""}`,C.green],["Estimates",estimates.length,"Saved","#60a5fa"],["Active",estimates.filter(e=>!["Won","Lost"].includes(e.pipelineStatus)).length,"In progress",C.amber]].map(([l,v,sub,col])=>(
-            <div key={l} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"16px 18px"}}>
-              <div style={{fontSize:10,color:C.muted,letterSpacing:1,marginBottom:5}}>{l}</div>
-              <div style={{fontSize:24,fontWeight:700,color:col,marginBottom:2}}>{v}</div>
-              <div style={{fontSize:11,color:C.dim}}>{sub}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{display:"flex",gap:7,marginBottom:16,overflowX:"auto",paddingBottom:4}}>
-          {["All",...STATUSES].map(st=>{const cnt=st==="All"?estimates.length:estimates.filter(e=>e.pipelineStatus===st).length;const col=STATUS_COL[st]||C.gold;return(<button key={st} style={{background:filter===st?(st==="All"?C.gold:col):"transparent",color:filter===st?"#080807":C.muted,border:`1px solid ${filter===st?(st==="All"?C.gold:col):C.border}`,padding:"7px 14px",borderRadius:20,cursor:"pointer",fontSize:12,whiteSpace:"nowrap"}} onClick={()=>setFilter(st)}>{st} ({cnt})</button>);})}
-        </div>
-        <input style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:C.text,fontSize:14,boxSizing:"border-box",marginBottom:18}} placeholder="🔍 Search project or client…" value={search} onChange={e=>setSearch(e.target.value)}/>
-        {estimates.length===0?(
-
-          <div style={{textAlign:"center",padding:"60px 24px"}}><div style={{fontSize:52,marginBottom:14}}>📊</div><h3 style={{color:C.muted,marginBottom:8}}>No estimates yet</h3><button style={{width:"100%",background:C.gold,color:"#080807",border:"none",padding:16,fontSize:16,fontWeight:700,borderRadius:6,cursor:"pointer"}} onClick={onNew}>Create First Estimate →</button></div>
-        ):(
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {filtered.map(est=>{const sc=STATUS_COL[est.pipelineStatus]||C.muted;return(
-              <div key={est.id} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",cursor:"pointer"}} onClick={()=>onView(est)}>
-                <div style={{flex:1,minWidth:160}}><div style={{fontWeight:700,fontSize:14,marginBottom:3}}>{est.projectName||"Unnamed"}</div><div style={{fontSize:11,color:C.muted}}>{est._clientName&&`👤 ${est._clientName}  `}{est.date&&`📅 ${est.date}`}</div></div>
-                <div style={{fontSize:18,fontWeight:700,color:C.gold,flexShrink:0}}>{fmt(est.grandTotal||est.totalCost)}</div>
-                <select style={{width:"100%",background:"#111",border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 14px",color:sc,fontSize:14,boxSizing:"border-box",width:"auto",fontSize:12,padding:"5px 8px"}} value={est.pipelineStatus||"Quote Sent"} onChange={e=>{e.stopPropagation();onStatus(est.id,e.target.value);}}>
-                  {STATUSES.map(st=><option key={st}>{st}</option>)}
-                </select>
-                <button style={{background:"none",border:`1px solid ${C.red}44`,color:C.red,padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:12,flexShrink:0}} onClick={e=>{e.stopPropagation();onDelete(est.id);}}>🗑</button>
+            <div style={{marginTop:'auto',paddingTop:'24px',borderTop:'1px solid var(--border-subtle)'}}>
+              <div className="dash-nav-item" onClick={() => setView('landing')}>
+                <span className="dash-nav-icon">←</span> Back to Site
               </div>
-            );})}
+            </div>
+          </div>
+
+          {/* Main */}
+          <div className="dash-main">
+            <div className="dash-topbar">
+              <div className="dash-page-title">
+                {dashTab === 'dashboard' ? 'Dashboard' : dashTab === 'projects' ? 'Projects' : dashTab.charAt(0).toUpperCase() + dashTab.slice(1)}
+              </div>
+              <div className="dash-topbar-actions">
+                <button className="btn btn-gold" onClick={() => setShowModal(true)}>+ New BOQ</button>
+                <div className="dash-avatar">J</div>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="stats-grid">
+              {[
+                { label:'Total BOQs', value:'24', icon:'📊', change:'+3 this month', color:'gold' },
+                { label:'Est. Project Value', value:'£1.2M', icon:'💰', change:'+18% vs last month', color:'green' },
+                { label:'Avg BOQ Time', value:'4 min', icon:'⚡', change:'vs 1 day manual' },
+                { label:'Active Projects', value:'7', icon:'🔨', change:'2 pending review' },
+              ].map(s => (
+                <div className="stat-card" key={s.label}>
+                  <div className="stat-label">{s.icon} {s.label}</div>
+                  <div className={`stat-value ${s.color || ''}`}>{s.value}</div>
+                  <div className="stat-change">{s.change}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Main grid */}
+            <div className="dash-grid">
+              <div className="card">
+                <div className="card-header">
+                  <div className="card-title">Recent Projects</div>
+                  <button className="btn btn-ghost" style={{padding:'6px 14px',fontSize:'12px'}}>View All</button>
+                </div>
+                <div className="card-body" style={{padding:0}}>
+                  <table className="projects-table">
+                    <thead>
+                      <tr>
+                        <th>Project</th>
+                        <th>Type</th>
+                        <th>Value</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {PROJECTS.map(p => (
+                        <tr key={p.id}>
+                          <td>
+                            <span className="project-name">{p.name}</span>
+                            <span className="project-client">{p.client}</span>
+                          </td>
+                          <td><span style={{fontSize:'12px',color:'var(--text-dim)'}}>{p.type}</span></td>
+                          <td><span style={{fontFamily:'Syne,sans-serif',fontWeight:700,color:'var(--gold)'}}>{p.value}</span></td>
+                          <td><span className={`tag ${statusColor(p.status)}`}>{p.status}</span></td>
+                          <td><span style={{fontSize:'12px',color:'var(--text-muted)'}}>{p.date}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="card">
+                <div className="card-header"><div className="card-title">Activity</div></div>
+                <div className="card-body" style={{padding:'0 22px'}}>
+                  <div className="activity-list">
+                    {[
+                      { dot:'var(--green)', text:'BOQ generated — Boxton Homes Plot 4', time:'2 hours ago' },
+                      { dot:'var(--gold)', text:'Export downloaded — 42 Grasmere v4.xlsx', time:'4 hours ago' },
+                      { dot:'var(--blue,#3B82F6)', text:'New project created — Commercial Fit-out Unit 7B', time:'Yesterday' },
+                      { dot:'var(--green)', text:'BOQ generated — Riverside Loft Conversion', time:'2 days ago' },
+                      { dot:'var(--text-muted)', text:'Account created', time:'14 Apr 2025' },
+                    ].map((a,i) => (
+                      <div className="activity-item" key={i}>
+                        <div className="activity-dot" style={{background:a.dot}} />
+                        <div>
+                          <div className="activity-text">{a.text}</div>
+                          <div className="activity-time">{a.time}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* New BOQ Modal */}
+        {showModal && (
+          <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
+            <div className="modal">
+              <div className="modal-header">
+                <div className="modal-title">✦ Generate New BOQ</div>
+                <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label className="form-label">Project Name</label>
+                  <input className="form-input" placeholder="e.g. Rear Extension — 14 Elm Street" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Client Name</label>
+                    <input className="form-input" placeholder="Client or homeowner" value={form.client} onChange={e=>setForm({...form,client:e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Project Type</label>
+                    <select className="form-select" value={form.type} onChange={e=>setForm({...form,type:e.target.value})}>
+                      {['Extension','New Build','Loft Conversion','Refurbishment','Commercial','Garage Conversion'].map(t=><option key={t}>{t}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Site Address</label>
+                  <input className="form-input" placeholder="Full postal address" value={form.address} onChange={e=>setForm({...form,address:e.target.value})} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Upload Drawings (optional)</label>
+                  <div className="upload-zone">
+                    <div className="upload-icon">📐</div>
+                    <div className="upload-text">Drop architect drawings here</div>
+                    <div className="upload-hint">PDF, JPG, PNG — up to 20MB per file</div>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Scope Notes</label>
+                  <textarea className="form-textarea" placeholder="Brief description of the work scope..." value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
+                <button className="btn btn-gold" onClick={handleGenerate}>✦ Generate BOQ</button>
+              </div>
+            </div>
           </div>
         )}
+
+        {/* Generating overlay */}
+        {generating && (
+          <div className="generating-overlay">
+            <div className="gen-spinner" />
+            <div className="gen-title">Generating your BOQ…</div>
+            <div className="gen-steps">
+              {[
+                'Reading architectural drawings',
+                'Extracting dimensions and spec',
+                'Calculating quantities by trade',
+                'Applying 2025 UK rates',
+                'Building Excel workbook',
+              ].map((s,i) => (
+                <div key={s} className={`gen-step ${genStep > i+1 ? 'done' : genStep === i+1 ? 'active' : ''}`}>
+                  <div className="gen-step-icon">{genStep > i+1 ? '✓' : genStep === i+1 ? '◉' : '○'}</div>
+                  {s}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // ── LANDING PAGE ──
+  return (
+    <>
+      <Head>
+        <title>BuildCostAI — Instant AI Bill of Quantities for UK Construction</title>
+        <meta name="description" content="Upload architect drawings, get a full itemised BOQ in minutes. AI-powered construction estimating built for UK builders and quantity surveyors." />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </Head>
+      <style>{STYLES}</style>
+
+      <nav className={`nav ${scrolled ? 'scrolled' : ''}`}>
+        <a className="nav-logo" href="#">
+          <div className="nav-logo-icon">🏗</div>
+          BuildCost<span>AI</span>
+        </a>
+        <ul className="nav-links">
+          <li><a onClick={() => document.getElementById('how').scrollIntoView({behavior:'smooth'})}>How it works</a></li>
+          <li><a onClick={() => document.getElementById('features').scrollIntoView({behavior:'smooth'})}>Features</a></li>
+          <li><a onClick={() => document.getElementById('pricing').scrollIntoView({behavior:'smooth'})}>Pricing</a></li>
+        </ul>
+        <div className="nav-actions">
+          <button className="btn btn-ghost" onClick={() => setView('dashboard')}>Sign in</button>
+          <button className="btn btn-gold" onClick={() => { setView('dashboard'); setShowModal(true); }}>Try Free →</button>
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <section className="hero">
+        <div className="hero-grid" />
+        <div className="hero-glow" />
+        <div className="hero-badge">
+          <div className="hero-badge-dot" />
+          Now in beta — free access while we grow
+        </div>
+        <h1>Your BOQ in<br /><em>minutes, not days</em></h1>
+        <p className="hero-sub">
+          Upload architect drawings. Get a full itemised Bill of Quantities with UK 2025 rates, broken down by trade and ready to export as Excel.
+        </p>
+        <div className="hero-actions">
+          <button className="btn btn-gold btn-lg" onClick={() => { setView('dashboard'); setShowModal(true); }}>🚀 Generate Your First BOQ Free</button>
+          <button className="btn btn-ghost btn-lg" onClick={() => setView('dashboard')}>View Demo Dashboard</button>
+        </div>
+        <div className="hero-stats">
+          <div>
+            <div className="hero-stat-val">4 min</div>
+            <div className="hero-stat-lbl">Average BOQ time</div>
+          </div>
+          <div>
+            <div className="hero-stat-val">300+</div>
+            <div className="hero-stat-lbl">Line items generated</div>
+          </div>
+          <div>
+            <div className="hero-stat-val">±8%</div>
+            <div className="hero-stat-lbl">Typical accuracy</div>
+          </div>
+        </div>
+
+        {/* Mini dashboard preview */}
+        <div className="preview-wrap">
+          <div className="preview-frame">
+            <div className="preview-bar">
+              <div className="preview-dot" style={{background:'#FF5F56'}} />
+              <div className="preview-dot" style={{background:'#FFBD2E'}} />
+              <div className="preview-dot" style={{background:'#27C93F'}} />
+              <div className="preview-url">buildcostai.vercel.app/dashboard</div>
+            </div>
+            <div className="preview-body">
+              <div className="preview-sidebar">
+                {['Dashboard','Projects','New BOQ','Templates','Clients'].map((l,i) => (
+                  <div key={l} className={`preview-nav-item ${i===0?'active':''}`}>
+                    <span>{['◼','📁','✦','📄','👤'][i]}</span>{l}
+                  </div>
+                ))}
+              </div>
+              <div className="preview-main">
+                <div className="preview-header">
+                  <div className="preview-h">Dashboard</div>
+                  <div className="btn btn-gold" style={{padding:'7px 14px',fontSize:'12px'}}>+ New BOQ</div>
+                </div>
+                <div className="preview-cards">
+                  <div className="preview-card">
+                    <div className="preview-card-label">Total BOQs</div>
+                    <div className="preview-card-val gold">24</div>
+                  </div>
+                  <div className="preview-card">
+                    <div className="preview-card-label">Project Value</div>
+                    <div className="preview-card-val green">£1.2M</div>
+                  </div>
+                  <div className="preview-card">
+                    <div className="preview-card-label">Avg Time</div>
+                    <div className="preview-card-val">4 min</div>
+                  </div>
+                </div>
+                <div className="preview-table">
+                  <div className="preview-th"><div>Project</div><div>Type</div><div>Value</div><div>Status</div></div>
+                  {[
+                    ['42 Grasmere Ext.','Extension','£124,800','Complete'],
+                    ['Boxton Homes Plot 4','New Build','£287,500','Active'],
+                    ['Riverside Loft','Conversion','£68,200','Complete'],
+                  ].map(([n,t,v,s]) => (
+                    <div className="preview-tr" key={n}>
+                      <div style={{fontSize:'12px',fontWeight:600}}>{n}</div>
+                      <div style={{fontSize:'11px',color:'var(--text-muted)'}}>{t}</div>
+                      <div style={{fontSize:'12px',color:'var(--gold)',fontWeight:700}}>{v}</div>
+                      <div><span className={`tag ${s==='Complete'?'tag-green':'tag-gold'}`} style={{fontSize:'10px'}}>{s}</span></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section id="how" style={{background:'var(--bg2)', borderTop:'1px solid var(--border-subtle)', borderBottom:'1px solid var(--border-subtle)'}}>
+        <div className="container">
+          <div className="section-label">How it works</div>
+          <h2 className="section-h">From drawings to BOQ<br />in three steps</h2>
+          <div className="steps">
+            {[
+              { num:'01', icon:'📐', title:'Upload Your Drawings', desc:'Upload architect drawings in PDF, JPG, or PNG. Our AI reads dimensions, specification, and scope directly from the plans.' },
+              { num:'02', icon:'⚡', title:'AI Generates Your BOQ', desc:'In minutes, BuildCostAI produces a fully itemised Bill of Quantities: labour, materials, sundries — all broken into UK trades.' },
+              { num:'03', icon:'📥', title:'Export & Use', desc:'Download a professional 3-sheet Excel workbook. Pre-filled 2025 rates you can edit. Ready to share with clients or contractors.' },
+            ].map(s => (
+              <div className="step" key={s.num}>
+                <div className="step-num">{s.num}</div>
+                <div className="step-icon">{s.icon}</div>
+                <div className="step-title">{s.title}</div>
+                <div className="step-desc">{s.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section id="features">
+        <div className="container">
+          <div className="section-label">Features</div>
+          <h2 className="section-h">Everything a UK builder<br />or QS needs</h2>
+          <p className="section-sub">Built specifically for UK construction. Not a generic AI tool — a specialist estimating assistant.</p>
+          <div className="features-grid">
+            {FEATURES.map(f => (
+              <div className="feature-card" key={f.title}>
+                <div className="feature-icon">{f.icon}</div>
+                <div className="feature-title">{f.title}</div>
+                <div className="feature-desc">{f.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section style={{background:'var(--bg2)', borderTop:'1px solid var(--border-subtle)', borderBottom:'1px solid var(--border-subtle)'}}>
+        <div className="container">
+          <div className="section-label">Testimonials</div>
+          <h2 className="section-h">What builders say</h2>
+          <div className="testimonials-grid">
+            {TESTIMONIALS.map(t => (
+              <div className="testi-card" key={t.name}>
+                <div className="testi-stars">{'★'.repeat(t.stars)}</div>
+                <div className="testi-text">"{t.text}"</div>
+                <div className="testi-author">
+                  <div className="testi-avatar">{t.avatar}</div>
+                  <div>
+                    <div className="testi-name">{t.name}</div>
+                    <div className="testi-role">{t.role}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section id="pricing">
+        <div className="container">
+          <div className="section-label">Pricing</div>
+          <h2 className="section-h">Simple, transparent pricing</h2>
+          <p className="section-sub">Start free. Upgrade when you need more. No hidden fees, no lock-in.</p>
+          <div className="pricing-grid">
+            {PRICING_PLANS.map(p => (
+              <div className={`pricing-card ${p.featured ? 'featured' : ''}`} key={p.name}>
+                {p.badge && <div className="pricing-badge">{p.badge}</div>}
+                <div className="pricing-name">{p.name}</div>
+                <div className="pricing-desc">{p.desc}</div>
+                <div className="pricing-price">{p.price}{p.price !== 'Free' && <span>/mo</span>}</div>
+                <div className="pricing-period">{p.period}</div>
+                <hr className="pricing-divider" />
+                <ul className="pricing-features">
+                  {p.features.map(f => <li key={f}>{f}</li>)}
+                </ul>
+                <button
+                  className={`btn ${p.featured ? 'btn-gold' : 'btn-outline'}`}
+                  style={{width:'100%',justifyContent:'center'}}
+                  onClick={() => { setView('dashboard'); setShowModal(p.name !== 'Business'); }}
+                >
+                  {p.featured ? '🚀 Start Free Trial' : p.name === 'Starter' ? 'Get Started Free' : '📞 Contact Josh'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <div className="cta-section">
+        <div className="cta-glow" />
+        <h2>Ready to price smarter?</h2>
+        <p>Join UK builders saving hours on every estimate. Free to start — no credit card required.</p>
+        <div className="cta-actions">
+          <button className="btn btn-gold btn-lg" onClick={() => { setView('dashboard'); setShowModal(true); }}>🚀 Generate Your First BOQ Free</button>
+          <button className="btn btn-ghost btn-lg">📞 Talk to Josh</button>
+        </div>
       </div>
-    </div>
+
+      <footer>
+        <div className="nav-logo">
+          <div className="nav-logo-icon" style={{width:'28px',height:'28px',fontSize:'14px'}}>🏗</div>
+          BuildCost<span>AI</span>
+        </div>
+        <ul className="footer-links">
+          {['Features','Pricing','Privacy','Terms','Contact'].map(l => <li key={l}><a>{l}</a></li>)}
+        </ul>
+        <div className="footer-copy">© 2025 BuildCostAI · Built in the UK 🇬🇧</div>
+      </footer>
+    </>
   );
 }
