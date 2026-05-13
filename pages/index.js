@@ -495,6 +495,19 @@ export default function BuildCostAI() {
   const [genStep, setGenStep] = useState(0);
   const [scrolled, setScrolled] = useState(false);
   const [form, setForm] = useState({ name:'', client:'', type:'Extension', address:'', notes:'' });
+  const [drawings, setDrawings] = useState([]);
+
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    setDrawings(prev => {
+      const combined = [...prev, ...files];
+      return combined.slice(0, 10);
+    });
+  };
+
+  const removeDrawing = (index) => {
+    setDrawings(prev => prev.filter((_,i) => i !== index));
+  };
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 20);
@@ -673,12 +686,43 @@ export default function BuildCostAI() {
                   <input className="form-input" placeholder="Full postal address" value={form.address} onChange={e=>setForm({...form,address:e.target.value})} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Upload Drawings (optional)</label>
-                  <div className="upload-zone">
-                    <div className="upload-icon">📐</div>
-                    <div className="upload-text">Drop architect drawings here</div>
-                    <div className="upload-hint">PDF, JPG, PNG — up to 20MB per file</div>
-                  </div>
+                  <label className="form-label">Upload Drawings — {drawings.length}/10</label>
+                  <input
+                    id="drawing-upload"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    multiple
+                    style={{display:'none'}}
+                    onChange={handleFileChange}
+                  />
+                  {drawings.length < 10 && (
+                    <div className="upload-zone" onClick={() => document.getElementById('drawing-upload').click()}
+                      onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--gold)';}}
+                      onDragLeave={e=>{e.currentTarget.style.borderColor='';}}
+                      onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor='';const files=Array.from(e.dataTransfer.files);setDrawings(prev=>[...prev,...files].slice(0,10));}}
+                    >
+                      <div className="upload-icon">📐</div>
+                      <div className="upload-text">Click or drag drawings here</div>
+                      <div className="upload-hint">PDF, JPG, PNG · up to 20MB per file · max 10 drawings</div>
+                    </div>
+                  )}
+                  {drawings.length > 0 && (
+                    <div style={{marginTop:'10px',display:'flex',flexDirection:'column',gap:'6px'}}>
+                      {drawings.map((f,i) => (
+                        <div key={i} style={{display:'flex',alignItems:'center',gap:'10px',background:'var(--bg3)',border:'1px solid var(--border-subtle)',borderRadius:'7px',padding:'8px 12px'}}>
+                          <span style={{fontSize:'16px'}}>{f.name.endsWith('.pdf') ? '📄' : '🖼'}</span>
+                          <span style={{flex:1,fontSize:'13px',color:'var(--text-dim)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.name}</span>
+                          <span style={{fontSize:'11px',color:'var(--text-muted)',flexShrink:0}}>{(f.size/1024/1024).toFixed(1)}MB</span>
+                          <button onClick={()=>removeDrawing(i)} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:'16px',lineHeight:1,padding:'0 2px'}} title="Remove">×</button>
+                        </div>
+                      ))}
+                      {drawings.length < 10 && (
+                        <button onClick={()=>document.getElementById('drawing-upload').click()} style={{background:'none',border:'1px dashed var(--border-subtle)',borderRadius:'7px',padding:'7px',fontSize:'12px',color:'var(--text-muted)',cursor:'pointer',marginTop:'2px'}}>
+                          + Add more ({10 - drawings.length} remaining)
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="form-group">
                   <label className="form-label">Scope Notes</label>
